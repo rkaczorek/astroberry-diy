@@ -67,14 +67,14 @@ All devices have been connected to Raspberry Pi 2 running Raspbian Jenny
 
 3. Astroberry AltIMU
 * AltIMU-10 v4 Gyro, Accelerometer, Compass, and Altimeter (L3GD20H, LSM303D, and LPS25H Carrier)
-  Device connected to I²C pins on Raspberry Pi B+:
+  Device connected to I²C pins on Raspberry Pi:
   GPIO02 - SDA
   GPIO03 - SCL
   Note: Make sure that I2C is active on your Raspberry Pi (check with i2cdetect -y 1|0)
 
 4. Astroberry GPS
 * Adafruit Ultimate GPS MTK3339 (including RT clock with backup battery).
- Device wired to Raspberry Pi B+ in the following way:
+ Device wired to Raspberry Pi in the following way:
  GPIO14 - RX
  GPIO15 - TX
  GPIO23 - EN (not supported yet by driver)
