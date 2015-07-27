@@ -1,6 +1,6 @@
 <devGroup group="Auxiliary">
 	<device label="Astroberry AltIMU">
 		<driver name="Astroberry AltIMU">indi_rpialtimu</driver>
-                <version>1.0</version>
+                <version>0.2</version>
 	</device>
 </devGroup>

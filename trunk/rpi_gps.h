@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2015 Radek Kaczorek  <rkaczorek AT gmail DOT com>
+  Copyright(c) 2014 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -19,22 +19,30 @@
 #ifndef RPIGPS_H
 #define RPIGPS_H
 
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <ctime>
+#include <string>
+#include <math.h>
+#include <memory>
+#include <libgpsmm.h>
+
 #include <defaultdevice.h>
-#include <indicom.h>
 
 class IndiRpigps : public INDI::DefaultDevice
 {
 protected:
 private:
-	time_t rawtime;
-	struct tm * utc_timeinfo;
-	struct tm * ltm_timeinfo;
-	char utc_time[20]; // format 2015-01-28T20:28:02
-	char utc_offset[1];
-	double offset;
-	loc_t data;
+	int timerid;
+	int counter;
+	gpsmm* gpsHandle;
+	INDI::BaseDevice * telescope;
 public:
-	IText GPStimeT[2];
+	INumber GPSmodeN[1];
+	INumberVectorProperty GPSmodeNP;
+
+	IText GPStimeT[1];
 	ITextVectorProperty GPStimeTP;
 
 	INumber GPSlocationN[3];
@@ -42,6 +50,9 @@ public:
 
 	ISwitch GPSsetS[2];
 	ISwitchVectorProperty GPSsetSP;
+
+	IText LOCtimeT[2];
+	ITextVectorProperty LOCtimeTP;
 
 	IText TimeT[2];
 	ITextVectorProperty TimeTP;
@@ -66,13 +77,10 @@ public:
 	virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 	virtual bool ISSnoopDevice(XMLEle *root);
 
-	virtual bool updateGPSLocation();
-	virtual bool updateGPSTime();
+	virtual bool updateLocal();
+	virtual bool updateGPS();
 	virtual bool updateLocation();
 	virtual bool updateTime();
-	
-	// position update couter
-	int counter;
 };
 
 #endif
