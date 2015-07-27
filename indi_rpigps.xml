@@ -1,6 +1,6 @@
 <devGroup group="Auxiliary">
 	<device label="Astroberry GPS">
 		<driver name="Astroberry GPS">indi_rpigps</driver>
-                <version>1.0</version>
+                <version>0.2</version>
 	</device>
 </devGroup>

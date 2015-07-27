@@ -1,16 +1,26 @@
-INDI Astroberry 1.0
+INDI Astroberry 1.0.1
 =================================
 This package provides the INDI drivers for Raspberry Pi devices:
-* Astroberry Focuser - stepper motor driver with autospeed feature
-* Astroberry GPS - GPS driver for scope location and time synchronization
+* Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus with INDI client such as KStars and Ekos
+* Astroberry GPS - GPS driver for easy scope location and UTC time setting
 * Astroberry AltIMU - accelerometer, magnetometer, gyro, atmospheric pressure sensor driver
 * Astroberry Board - power switch board allowing for remote powering on/off up to 4 devices.
-* Astroberry Mosaic - mosaic setup and run
+
+Changelog
+============
+v1.0.1
+indi_rpigps     -       FIX for gps reading freeze and full integration with gpsd service (required)
+indi_rpifocus   -       FIX for lack of focuser status handling e.g. taking images during move
+indi_rpifocus   -       FIX for inconsistences in focus direction
+indi_rpifocus   -       disabling dualspeed mode. single speed mode only used (native)
+indi_rpialtimu  -       change of values format from 0.3f to 0.1f
+
+v1.0
+all		- Initial release of astroberry drivers
 
 Requirements
 ============
-* INDI available here http://sourceforge.net/p/indi/code/HEAD/tree/trunk/
-* libgps (for Astroberry GPS only) available here https://github.com/wdalmut/libgps
+* INDI available here http://indilib.org/download.html
 * RTIMULib (for Astroberry AltIMU only) available here https://github.com/richards-tech/RTIMULib
 # bcm2835 (for Astroberry Focuser and Astroberry Board) available here http://www.airspayce.com/mikem/bcm2835/
 
@@ -38,7 +48,7 @@ See Hardware specs below for detailed hardware and wiring instructions.
 
 Hardware specs for Astroberry drivers
 ======================================
-All devices have been connected to Raspberry Pi 2 running Raspbian Jenny
+All devices have been connected to Raspberry Pi 2 running Raspbian Jenny or Ubuntu Mate
 
 1. Astroberry Board
 * Power switch board - YwRobot 4 relay connected to Raspberry Pi (40 GPIO pins available)
@@ -79,8 +89,3 @@ All devices have been connected to Raspberry Pi 2 running Raspbian Jenny
  GPIO15 - TX
  GPIO23 - EN (not supported yet by driver)
  GPIO24 - PPS (not supported yet by driver)
-
-5. Astroberry Mosaic
-No additional hardware used.
-Note: You must set the names of your ccd and mount before compiling the driver.
-      Look for MYCCD in rpi_shot.cpp and MYSCOPE in rpi_goto.cpp 

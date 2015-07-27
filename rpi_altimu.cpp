@@ -146,23 +146,23 @@ bool IndiRpialtimu::initProperties()
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
 
-    IUFillNumber(&PositionN[0],"ROLL","Roll (arc deg)","%0.3f",-180,180,0,0.0);
-    IUFillNumber(&PositionN[1],"PITCH","Pitch (arc deg)","%0.3f",-180,180,0,0.0 );
-    IUFillNumber(&PositionN[2],"YAW","Yaw (arc deg)","%0.3f",-180,180,0,0.0 );
+    IUFillNumber(&PositionN[0],"ROLL","Roll (arc deg)","%0.1f",-180,180,0,0.0);
+    IUFillNumber(&PositionN[1],"PITCH","Pitch (arc deg)","%0.1f",-180,180,0,0.0 );
+    IUFillNumber(&PositionN[2],"YAW","Yaw (arc deg)","%0.1f",-180,180,0,0.0 );
     IUFillNumberVector(&PositionNP,PositionN,3,getDeviceName(),"ORIENTATION","Orientation",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillNumber(&PressureN[0],"PRESS_VALUE","Pressure (hPa)","%0.2f",0,2000,0,0.0);
+    IUFillNumber(&PressureN[0],"PRESS_VALUE","Pressure (hPa)","%0.1f",0,2000,0,0.0);
     IUFillNumberVector(&PressureNP,PressureN,1,getDeviceName(),"PRESS","Pressure",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillNumber(&AltitudeN[0],"ALT_VALUE","Height over see level (m)","%0.2f",0,20000,0,0.0);
+    IUFillNumber(&AltitudeN[0],"ALT_VALUE","Height over see level (m)","%0.1f",0,20000,0,0.0);
     IUFillNumberVector(&AltitudeNP,AltitudeN,1,getDeviceName(),"ALT","Altitude",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillNumber(&TemperatureN[0],"TEMP_VALUE","System temperature (C)","%0.2f",0,100,0,0.0);
+    IUFillNumber(&TemperatureN[0],"TEMP_VALUE","Temperature (C)","%0.1f",0,100,0,0.0);
     IUFillNumberVector(&TemperatureNP,TemperatureN,1,getDeviceName(),"TEMP","Temperature",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillNumber(&AdjustmentN[0],"ROLL","Roll (arc deg)","%0.3f",-180,180,0,0.0);
-    IUFillNumber(&AdjustmentN[1],"PITCH","Pitch (arc deg)","%0.3f",-180,180,0,0.0 );
-    IUFillNumber(&AdjustmentN[2],"YAW","Yaw (arc deg)","%0.3f",-180,180,0,0.0 );
+    IUFillNumber(&AdjustmentN[0],"ROLL","Roll (arc deg)","%0.1f",-180,180,0,0.0);
+    IUFillNumber(&AdjustmentN[1],"PITCH","Pitch (arc deg)","%0.1f",-180,180,0,0.0 );
+    IUFillNumber(&AdjustmentN[2],"YAW","Yaw (arc deg)","%0.1f",-180,180,0,0.0 );
     IUFillNumberVector(&AdjustmentNP,AdjustmentN,3,getDeviceName(),"ADJUSTMENT","Adjustment",OPTIONS_TAB,IP_RW,60,IPS_OK);
     
     return true;

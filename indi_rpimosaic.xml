@@ -1,6 +1,0 @@
-<devGroup group="Auxiliary">
-	<device label="Astroberry Mosaic">
-		<driver name="Astroberry Mosaic">indi_rpimosaic</driver>
-                <version>1.0</version>
-	</device>
-</devGroup>

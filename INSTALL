@@ -1,17 +1,13 @@
 GENERIC INSTALL
-============
+===============
 
 You must have CMake >= 2.4.7 in order to build this package.
 
 If you want to compile just indi-astroberry drivers
 
-1) $ mv astroberry-svn indi-astroberry
-2) $ mv indi-astroberry INDI_ROOT_DIR/3rdparty/
-3) $ cd INDI_ROOT_DIR/3rdparty/indi-astroberry
-4) $ cmake -DCMAKE_INSTALL_PREFIX=/usr .
+1) $ svn checkout svn://svn.code.sf.net/p/astroberry/svn/trunk/ astroberry-svn
+2) $ mkdir indi-astroberry
+3) $ cd indi-astroberry
+4) $ cmake -DCMAKE_INSTALL_PREFIX=/usr ../astroberry-svn
 5) $ make
-6) $ su -c 'make install' or sudo make install
-
-If you want to compile indi-astroberry along with other 3rdparty drivers you must add
-add_subdirectory(indi-astroberry)
-to INDI_ROOT_DIR/3rdparty/CMakeLists.txt just before line starting with "# Check if libraries are found."
+6) $ su -c 'make install' OR sudo make install

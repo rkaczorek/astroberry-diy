@@ -11,6 +11,8 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 find_package(INDI REQUIRED)
 
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
+
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
@@ -59,37 +61,4 @@ add_executable(indi_rpifocus ${indi_rpifocus_SRCS})
 target_link_libraries(indi_rpifocus indidriver bcm2835)
 install(TARGETS indi_rpifocus RUNTIME DESTINATION bin )
 install(FILES indi_rpifocus.xml DESTINATION ${INDI_DATA_DIR})
-
-################ Astroberry Mosaic ################
-
-set(indi_rpimosaic_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/rpi_mosaic.cpp
-   )
-
-add_executable(indi_rpimosaic ${indi_rpimosaic_SRCS})
-target_link_libraries(indi_rpimosaic indidriver)
-install(TARGETS indi_rpimosaic RUNTIME DESTINATION bin )
-install(FILES indi_rpimosaic.xml DESTINATION ${INDI_DATA_DIR})
-
-
-################ Astroberry GOTO ################
-
-set(indi_goto_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/rpi_goto.cpp
-   )
-
-add_executable(indi_goto ${indi_goto_SRCS})
-target_link_libraries(indi_goto indi indiclient pthread z)
-install(TARGETS indi_goto RUNTIME DESTINATION bin )
-
-################ Astroberry SHOT ################
-
-set(indi_shot_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/rpi_shot.cpp
-   )
-
-add_executable(indi_shot ${indi_shot_SRCS})
-target_link_libraries(indi_shot indi indiclient pthread z)
-install(TARGETS indi_shot RUNTIME DESTINATION bin )
-
 

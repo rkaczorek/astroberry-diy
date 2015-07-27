@@ -25,18 +25,6 @@ class FocusRpi : public INDI::Focuser
 {
     protected:
     private:
-        int ticks;
-        int speed;
-        
-		ISwitch FocusGotoS[3];
-        ISwitchVectorProperty FocusGotoSP;
-
-        ISwitch FocusMoveS[2];
-        ISwitchVectorProperty FocusMoveSP;
-
-        INumber FocusStepN[1];
-        INumberVectorProperty FocusStepNP;
-        
         ISwitch FocusResetS[1];
         ISwitchVectorProperty FocusResetSP;
         
@@ -62,8 +50,9 @@ class FocusRpi : public INDI::Focuser
         virtual bool ISSnoopDevice(XMLEle *root);
         virtual bool saveConfigItems(FILE *fp);
 
-		virtual int MoveFocuser(FocusDirection dir, int speed, int duration);
-        virtual int MoveAbsFocuser(int ticks);
+		virtual IPState MoveFocuser(FocusDirection dir, int speed, int duration);
+        virtual IPState MoveAbsFocuser(int ticks);
+        virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
         virtual bool SetSpeed(int speed);
 };
 
