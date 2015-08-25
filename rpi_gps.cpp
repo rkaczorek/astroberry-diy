@@ -16,25 +16,14 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include <stdio.h>
-#include <unistd.h>
-#include <iostream>
-#include <sys/time.h>
-#include <ctime>
-#include <string>
-#include <math.h>
-#include <memory>
-#include <libgpsmm.h>
-
 #include "rpi_gps.h"
 
 
-#define POLLMS 250
+#define POLLMS 1000
 
 // We declare an auto pointer to IndiRpigps
 std::auto_ptr<IndiRpigps> indiRpigps(0);
 
-void ISPoll(void *p);
 void ISInit()
 {
    static int isInit =0;
@@ -46,26 +35,31 @@ void ISInit()
     if(indiRpigps.get() == 0) indiRpigps.reset(new IndiRpigps());
 
 }
+
 void ISGetProperties(const char *dev)
 {
 	ISInit();
 	indiRpigps->ISGetProperties(dev);
 }
+
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
 	ISInit();
 	indiRpigps->ISNewSwitch(dev, name, states, names, num);
 }
+
 void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
 {
 	ISInit();
 	indiRpigps->ISNewText(dev, name, texts, names, num);
 }
+
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
 	ISInit();
 	indiRpigps->ISNewNumber(dev, name, values, names, num);
 }
+
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int num)
 {
 	INDI_UNUSED(dev);
@@ -77,21 +71,24 @@ void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[],
 	INDI_UNUSED(names);
 	INDI_UNUSED(num);
 }
+
 void ISSnoopDevice (XMLEle *root)
 {
-    ISInit();
-    indiRpigps->ISSnoopDevice(root);
+	INDI_UNUSED(root);
 }
+
 IndiRpigps::IndiRpigps()
 {
+	setVersion(2,0);
 }
+
 IndiRpigps::~IndiRpigps()
 {
 }
+
 bool IndiRpigps::Connect()
 {
 	// init GPS receiver
-    //gpsmm gpsHandle("localhost", DEFAULT_GPSD_PORT);
 	gpsHandle = new gpsmm("localhost", DEFAULT_GPSD_PORT);
 
 	if (gpsHandle->stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
@@ -102,335 +99,211 @@ bool IndiRpigps::Connect()
 	//// reset values
 	GPSmodeN[0].value = 0;
 	IDSetNumber(&GPSmodeNP, NULL);
-	GPStimeT[0].text = NULL;			
-	IDSetText(&GPStimeTP, NULL);
-	LOCtimeT[0].text = NULL;			
-	IDSetText(&LOCtimeTP, NULL);
-	GPSlocationN[0].value = 0;
-	GPSlocationN[1].value = 0;
-	GPSlocationN[2].value = 0;
-	IDSetNumber(&GPSlocationNP, NULL);
+	PolarisHN[0].value = 0;
+	IDSetNumber(&PolarisHNP, NULL);
 
 	// start timer
-	timerid = SetTimer ( POLLMS );
+	SetTimer( POLLMS );
 	
     IDMessage(getDeviceName(), "Astroberry GPS connected successfully.");
     return true;
 }
+
 bool IndiRpigps::Disconnect()
 {
-	// start timer
-	RemoveTimer (timerid);
-
 	// disconnect GPS receiver
 	gpsHandle->~gpsmm();
 
     IDMessage(getDeviceName(), "Astroberry GPS disconnected successfully.");
     return true;
 }
+
 void IndiRpigps::TimerHit()
 {
 	if(isConnected())
 	{
-		// update local time
-		updateLocal();
-
-		// update gps time and position each tick
-		if ( counter > 1 )
-		{	
-			updateGPS();
-			counter=0;
-		}
-		counter++;
+		// update gps data
+		updateGPS();
 		SetTimer( POLLMS );
     }
 }
+
 const char * IndiRpigps::getDefaultName()
 {
 	return (char *)"Astroberry GPS";
 }
+
 bool IndiRpigps::initProperties()
 {    
     // We init parent properties first
-    INDI::DefaultDevice::initProperties();
+    INDI::GPS::initProperties();
 
     IUFillNumber(&GPSmodeN[0],"GPS_FIX","Fix Mode","%0.0f",0,5,1,0 );
     IUFillNumberVector(&GPSmodeNP,GPSmodeN,1,getDeviceName(),"GPS_MODE","GPS Status",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillText(&GPStimeT[0],"TIME","Time (UTC)","");
-    IUFillTextVector(&GPStimeTP,GPStimeT,1,getDeviceName(),"GPS_TIME","GPS Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
+    IUFillNumber(&PolarisHN[0],"HOUR_ANGLE","Polaris Hour Angle","%010.6m",0,23,0,0.0);
+    IUFillNumberVector(&PolarisHNP,PolarisHN,1,getDeviceName(),"POLARIS_HA","Polaris HA",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
 
-    IUFillText(&LOCtimeT[0],"LOCAL","System Time","");
-    IUFillText(&LOCtimeT[1],"OFFSET","UTC Offset","");
-    IUFillTextVector(&LOCtimeTP,LOCtimeT,2,getDeviceName(),"LOCAL_TIME","Local Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
-
-    IUFillNumber(&GPSlocationN[0],"GPSLAT","Lat (dd:mm:ss)","%010.6m",-90,90,0,0.0);
-    IUFillNumber(&GPSlocationN[1],"GPSLONG","Lon (dd:mm:ss)","%010.6m",0,360,0,0.0 );
-    IUFillNumber(&GPSlocationN[2],"GPSELEV","Elevation (m)","%g",-200,10000,0,0 );
-    IUFillNumberVector(&GPSlocationNP,GPSlocationN,3,getDeviceName(),"GPS_COORD","GPS Location",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
-
-    IUFillSwitch(&GPSsetS[0], "GPSPOS", "Location", ISS_OFF);
-    IUFillSwitch(&GPSsetS[1], "GPSTIME", "Time", ISS_OFF);
-    IUFillSwitchVector(&GPSsetSP, GPSsetS, 2, getDeviceName(), "GPS_SYNC", "Set Site", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
-
-	// local copy of snooped values
-
-    IUFillText(&TimeT[0],"UTC","UTC Time","");
-    IUFillText(&TimeT[1],"OFFSET","UTC Offset","");
-    IUFillTextVector(&TimeTP,TimeT,2,"EQMod Mount","TIME_UTC","Time",SITE_TAB,IP_RW,60,IPS_OK);
-
-    IUFillNumber(&LocationN[0],"LAT","Lat (dd:mm:ss)","%010.6m",-90,90,0,0.0);
-    IUFillNumber(&LocationN[1],"LONG","Lon (dd:mm:ss)","%010.6m",0,360,0,0.0 );
-    IUFillNumber(&LocationN[2],"ELEV","Elevation (m)","%g",-200,10000,0,0 );
-    IUFillNumberVector(&LocationNP,LocationN,3,"EQMod Mount","GEOGRAPHIC_COORD","Location",SITE_TAB,IP_RW,60,IPS_OK);
-
-	counter = 0;
+    IUFillSwitch(&GPSupdateS[0], "GPS_AUTO", "Enable", ISS_ON);
+    IUFillSwitchVector(&GPSupdateSP, GPSupdateS, 1, getDeviceName(), "GPS_UPDATE", "Auto refresh", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
+	
 
     return true;
 }
+
 bool IndiRpigps::updateProperties()
 {
     // Call parent update properties first
-    INDI::DefaultDevice::updateProperties();
+    INDI::GPS::updateProperties();
 
     if (isConnected())
     {
+		deleteProperty(RefreshSP.name);
         defineNumber(&GPSmodeNP);
-        defineNumber(&GPSlocationNP);
-        defineText(&GPStimeTP);
-        defineText(&LOCtimeTP);
-		defineSwitch(&GPSsetSP);
-        //defineNumber(&LocationNP);
-        //defineText(&TimeTP);
-        
-		IDSnoopDevice("EQMod Mount", "Scope Location");
-		IDSnoopDevice("EQMod Mount", "UTC");        
+        defineNumber(&PolarisHNP);
+        defineSwitch(&GPSupdateSP);
+        //defineSwitch(&RefreshSP);
     }
     else
     {
 		// We're disconnected
         deleteProperty(GPSmodeNP.name);
-        deleteProperty(GPSlocationNP.name);
-		deleteProperty(LOCtimeTP.name);
-		deleteProperty(GPStimeTP.name);
-		deleteProperty(GPSsetSP.name);
-        //deleteProperty(LocationNP.name);
-		//deleteProperty(TimeTP.name);
-		
-		// close GPS receiver
-		//gps_off();
+        deleteProperty(PolarisHNP.name);
+        deleteProperty(GPSupdateSP.name);
     }
     return true;
 }
-void IndiRpigps::ISGetProperties(const char *dev)
-{	
-    INDI::DefaultDevice::ISGetProperties(dev);
 
-    /* Add debug controls so we may debug driver if necessary */
-    // addDebugControl();
-}
-bool IndiRpigps::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
-{
-	return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
-}
 bool IndiRpigps::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 	// first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
     {
 		// handle sync with scope
-		if(!strcmp(name, GPSsetSP.name))
-		{
-			IUUpdateSwitch(&GPSsetSP, states, names, n);
-
-			// Location snooping
-			if ( GPSsetS[0].s == ISS_ON )
+		if(!strcmp(name, GPSupdateSP.name))
+		{			
+			if ( GPSupdateS[0].s == ISS_ON )
 			{
-				updateLocation();
-				
-				GPSsetS[0].s = ISS_OFF;
-				IDSetSwitch(&GPSsetSP, NULL);
+				IDMessage(getDeviceName(), "Astroberry GPS refresh disabled.");
+				GPSupdateS[0].s = ISS_OFF;
+				GPSupdateSP.s = IPS_BUSY;
+			} else {
+				IDMessage(getDeviceName(), "Astroberry GPS refresh enabled.");
+				GPSupdateS[0].s = ISS_ON;
+				GPSupdateSP.s = IPS_OK;
 			}
-
-			// Time snooping
-			if ( GPSsetS[1].s == ISS_ON )
-			{
-				updateTime();
-				
-				GPSsetS[1].s = ISS_OFF;
-				IDSetSwitch(&GPSsetSP, NULL);
-			}
+			IDSetSwitch(&GPSupdateSP, NULL);
 		}
 	}
-	return INDI::DefaultDevice::ISNewSwitch (dev, name, states, names, n);
+	return INDI::GPS::ISNewSwitch (dev, name, states, names, n);
 }
-bool IndiRpigps::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
-{
-	return INDI::DefaultDevice::ISNewText (dev, name, texts, names, n);
-}
-bool IndiRpigps::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
-{
-	return INDI::DefaultDevice::ISNewBLOB (dev, name, sizes, blobsizes, blobs, formats, names, n);
-}
-bool IndiRpigps::ISSnoopDevice(XMLEle *root)
-{
-    return INDI::DefaultDevice::ISSnoopDevice(root);
-}
-bool IndiRpigps::updateLocal()
-{
-	//LOCtimeTP.s = IPS_BUSY;
-	//IDSetText(&LOCtimeTP, NULL);
 
-	// init time vars
-	time_t rawtime;
-	struct tm * ltm_timeinfo;
-	char local_time[32]; // format 2015-01-28T20:28:02
-	char utc_offset[1];
-	double offset;
 
-	// get local time
-	time(&rawtime);
-	ltm_timeinfo = localtime (&rawtime);
-	strftime(local_time, sizeof(local_time), "%Y-%m-%dT%H:%M:%S", ltm_timeinfo);
-
-	// get utc_offset
-	offset = ltm_timeinfo->tm_gmtoff / 3600;
-
-	// adjust offset for DST
-	if (!ltm_timeinfo->tm_isdst)
-		offset -= 1;
-	
-	// convert offset to string
-	sprintf(utc_offset,"%0.0f", offset);
-	
-	// update INDI values
-	LOCtimeT[0].text = local_time;
-	LOCtimeT[1].text = utc_offset;
-	//LOCtimeTP.s = IPS_OK;
-	IDSetText(&LOCtimeTP, NULL);
-	
-	return true;
-}
 bool IndiRpigps::updateGPS()
 {
-	// init time vars
-	time_t rawtime;
-	struct tm * utc_timeinfo;
-	char utc_time[32]; // format 2015-01-28T20:28:02
-	struct gps_data_t* gpsData;
-	
 //	if ( !gpsHandle->waiting(50000000) )
 //		return false;
-		
-	if ((gpsData = gpsHandle->read()) == NULL)
-		return false;
 
-	if ( gpsData->fix.mode < 1 )
+	if ((gpsData = gpsHandle->read()) == NULL || gpsData->fix.mode < 1)
+	{
+		GPSmodeNP.s = IPS_BUSY;
+		IDSetNumber(&GPSmodeNP, NULL);
 		return false;
+	}
 
 	// detect 3d fix
 	if (GPSmodeN[0].value < gpsData->fix.mode && gpsData->fix.mode == 3)
 		IDMessage(getDeviceName(), "Astroberry GPS 3D FIX obtained.");
+
+	// detect 3d fix lost
+	if (GPSmodeN[0].value > gpsData->fix.mode && gpsData->fix.mode < 3)
+		IDMessage(getDeviceName(), "Astroberry GPS 3D FIX lost.");
 		
 	//// update gps status
 	GPSmodeN[0].value = gpsData->fix.mode;
-	//GPSmodeNP.s = IPS_OK;
+	GPSmodeNP.s = IPS_OK;
 	IDSetNumber(&GPSmodeNP, NULL);
 
+	// skip if auto refresh is disabled
+	if ( GPSupdateS[0].s == ISS_OFF )
+		return false;
+	
 	// update gps time
-	if ( GPStimeTP.s == IPS_OK && gpsData->fix.mode >= 1 )
+	struct tm *utc_timeinfo, *local_timeinfo;
+	static char ts[32];
+	time_t rawtime;
+
+	if ( gpsData->fix.mode >= 1 )
 	{
-		GPStimeTP.s = IPS_BUSY;
+		TimeTP.s = IPS_BUSY;
+		IDSetText(&TimeTP, NULL);
 
 		// get utc_time from gps
 		rawtime = gpsData->fix.time;
 		utc_timeinfo = gmtime (&rawtime);
-		strftime(utc_time, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
+		strftime(ts, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
+		IUSaveText(&TimeT[0], ts);
 
-		// update INDI values
-		GPStimeT[0].text = utc_time;			
-		GPStimeTP.s = IPS_OK;
-		IDSetText(&GPStimeTP, NULL);
+		// get utc offset
+		local_timeinfo = localtime (&rawtime);
+		snprintf(ts, sizeof(ts), "%4.2f", (local_timeinfo->tm_gmtoff/3600.0));
+		IUSaveText(&TimeT[1], ts);
+		
+		TimeTP.s = IPS_OK;		
+		IDSetText(&TimeTP, NULL);
 	}
 	
 	// update gps location
-	if ( GPSlocationNP.s == IPS_OK  && gpsData->fix.mode >= 3 )
+	if ( gpsData->fix.mode >= 3 )
 	{
-		GPSlocationNP.s = IPS_BUSY;
-		IDSetNumber(&GPSlocationNP, NULL);
+		LocationNP.s = IPS_BUSY;
+		IDSetNumber(&LocationNP, NULL);
 				  
 		// update INDI values
-		GPSlocationN[0].value = gpsData->fix.latitude;
-		GPSlocationN[1].value = gpsData->fix.longitude;
-		GPSlocationN[2].value = gpsData->fix.altitude;
+		LocationN[0].value = gpsData->fix.latitude;
+		LocationN[1].value = gpsData->fix.longitude;
+		LocationN[2].value = gpsData->fix.altitude;
 
-		GPSlocationNP.s = IPS_OK;
-		IDSetNumber(&GPSlocationNP, NULL);
-	}
-	
-	return true;
-}
-bool IndiRpigps::updateLocation()
-{
-	if ( GPSmodeN[0].value < 3 )
-	{
-		IDMessage(getDeviceName(), "No reliable location data available yet.");
-		return false;
-	}
+		LocationNP.s = IPS_OK;
+		IDSetNumber(&LocationNP, NULL);
+
+		// calculate Polaris HA
+		double jd, lst;
+		char* siderealtime;
 		
-	LocationNP.s = IPS_BUSY;
-	IDSetNumber(&LocationNP, NULL);
+		// polaris location - RA 02h 31m 47s DEC 89° 15' 50'' (J2000)
+		jd = ln_get_julian_from_sys();
+		lst=ln_get_apparent_sidereal_time(jd);
 
-	// update INDI values
-	LocationN[0].value = GPSlocationN[0].value;
-	LocationN[1].value = GPSlocationN[1].value;
-	LocationN[2].value = GPSlocationN[2].value;
-	LocationNP.s = IPS_OK;
-	IDSetNumber(&LocationNP, "Location data received from Astroberry GPS - Lat: %02.3f Lon: %02.3f Elev: %02.3f", GPSlocationN[0].value, GPSlocationN[1].value, GPSlocationN[2].value);
-	IDMessage(getDeviceName(), "Location data send to the telescope");
+		// Local Hour Angle = Local Sidereal Time - Polaris Right Ascension
+		double polarislsrt = lst - 2.529722222 + (gpsData->fix.longitude / 15.0);	
 
-	return true;
-}
+		PolarisHN[0].value = polarislsrt;
+		IDSetNumber(&PolarisHNP, NULL);
 
-bool IndiRpigps::updateTime()
-{
-	if ( GPSmodeN[0].value < 3 )
-	{
-		IDMessage(getDeviceName(), "No reliable time data available yet.");
-		return false;
+		// Polaris transit time ----------------- TODO: add text field, set values below
+	/*
+		struct ln_lnlat_posn observer;
+		struct ln_equ_posn polaris;
+		struct ln_rst_time rst;
+		struct ln_zonedate transit;
+		
+		jd = ln_get_julian_from_sys();
+
+		// observers location
+		observer.lat = gpsData->fix.latitude;
+		observer.lng = gpsData->fix.longitude;
+
+		// polaris location - RA 02h 31m 47s DEC 89° 15' 50'' (J2000)
+		polaris.ra = 2.529722222;
+		polaris.dec = 89.263888889;
+		
+		// check transit time only		
+		ln_get_object_rst (jd, &observer, &polaris, &rst);
+		ln_get_local_date(rst.transit, &transit);
+		IDMessage(getDeviceName(), "Polaris Transit Time %d:%d:%f", transit.hours, transit.minutes, transit.seconds);
+	*/	
 	}
 
-	// init time vars
-	time_t rawtime;
-	struct tm * utc_timeinfo;
-	char utc_time[32]; // format 2015-01-28T20:28:02
-	struct gps_data_t* gpsData;
-
-	if ((gpsData = gpsHandle->read()) == NULL)
-		return false;
-
-	if ( gpsData->fix.mode < 3 )
-		return false;
-	
-//	if ( !gpsHandle->waiting(50000000) )
-//		return false;
-	
-	// update gps time
-	TimeTP.s = IPS_BUSY;
-	IDSetText(&TimeTP, NULL);
-
-	// get utc_time from gps
-	rawtime = gpsData->fix.time;
-	utc_timeinfo = gmtime (&rawtime);
-	strftime(utc_time, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
-
-
-	// update INDI values
-	TimeT[0].text = utc_time;
-	TimeT[1].text = LOCtimeT[1].text;
-	//IUSaveText(IUFindText(&TimeTP, "UTC"), utc_time);
-	TimeTP.s = IPS_OK;
-	IDSetText(&TimeTP, "Time data received from Astroberry GPS - Time: %s Offset: %s", TimeT[0].text, TimeT[1].text);
-	IDMessage(getDeviceName(), "Time data send to the telescope");	
-	return true;
+    return true;
 }
