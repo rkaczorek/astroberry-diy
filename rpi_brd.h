@@ -25,6 +25,9 @@ class IndiRpibrd : public INDI::DefaultDevice
 {
 protected:
 private:
+	int timerid;
+	ISwitch Switch0S[1];
+	ISwitchVectorProperty Switch0SP;
 	ISwitch Switch1S[2];
 	ISwitchVectorProperty Switch1SP;
 	ISwitch Switch2S[2];

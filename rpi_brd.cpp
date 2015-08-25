@@ -25,8 +25,6 @@
 // We declare an auto pointer to IndiRpibrd
 std::auto_ptr<IndiRpibrd> indiRpibrd(0);
 
-#define POLLMS 1000
-
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
 #define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5
 #define IN2 RPI_BPLUS_GPIO_J8_31	// GPIO06
@@ -43,7 +41,6 @@ void ISInit()
 
     isInit = 1;
     if(indiRpibrd.get() == 0) indiRpibrd.reset(new IndiRpibrd());
-    //IEAddTimer(POLLMS, ISPoll, NULL);
 
 }
 void ISGetProperties(const char *dev)
@@ -146,7 +143,8 @@ void IndiRpibrd::TimerHit()
 {
 	if(isConnected())
 	{
-		//SetTimer( POLLMS );
+		IDMessage(getDeviceName(), "Halting system. Bye bye.");
+		system("shutdown -h now");
     }
 }
 const char * IndiRpibrd::getDefaultName()
@@ -157,6 +155,9 @@ bool IndiRpibrd::initProperties()
 {
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
+
+    IUFillSwitch(&Switch0S[0], "SW0ON", "Shutdown", ISS_OFF);
+    IUFillSwitchVector(&Switch0SP, Switch0S, 1, getDeviceName(), "SWITCH_0", "System", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
 
     IUFillSwitch(&Switch1S[0], "SW1ON", "Power ON", ISS_OFF);
     IUFillSwitch(&Switch1S[1], "SW1OFF", "Power OFF", ISS_ON);
@@ -183,18 +184,16 @@ bool IndiRpibrd::updateProperties()
 
     if (isConnected())
     {
+		defineSwitch(&Switch0SP);
 		defineSwitch(&Switch1SP);
 		defineSwitch(&Switch2SP);
 		defineSwitch(&Switch3SP);
-		defineSwitch(&Switch4SP);
-	
-		loadConfig();
-				
-		//SetTimer ( POLLMS );		
+		defineSwitch(&Switch4SP);	
     }
     else
     {
 		// We're disconnected
+		deleteProperty(Switch0SP.name);
 		deleteProperty(Switch1SP.name);
 		deleteProperty(Switch2SP.name);
 		deleteProperty(Switch3SP.name);
@@ -218,6 +217,32 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 	// first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
     {
+		// handle switch 0
+		if (!strcmp(name, Switch0SP.name))
+		{
+			IUUpdateSwitch(&Switch0SP, states, names, n);
+
+			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_OK )
+			{
+				IDMessage(getDeviceName(), "System is going to shutdown. Click again within 10 seconds to abort.");
+				Switch0SP.s = IPS_BUSY;
+				IDSetSwitch(&Switch0SP, NULL);
+				timerid = SetTimer ( 10000 );
+				return true;
+			}
+
+			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_BUSY )
+			{
+				IDMessage(getDeviceName(), "System shutdown aborted.");
+				Switch0S[0].s = ISS_OFF;
+				Switch0SP.s = IPS_OK;
+				IDSetSwitch(&Switch0SP, NULL);
+				RemoveTimer(timerid);
+				return true;
+			}
+
+		}
+
 		// handle switch 1
 		if (!strcmp(name, Switch1SP.name))
 		{
