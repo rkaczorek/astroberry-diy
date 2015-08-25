@@ -47,7 +47,7 @@ set(indi_rpigps_SRCS
    )
 
 add_executable(indi_rpigps ${indi_rpigps_SRCS})
-target_link_libraries(indi_rpigps indidriver gps)
+target_link_libraries(indi_rpigps indidriver gps nova)
 install(TARGETS indi_rpigps RUNTIME DESTINATION bin )
 install(FILES indi_rpigps.xml DESTINATION ${INDI_DATA_DIR})
 

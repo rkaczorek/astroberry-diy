@@ -19,68 +19,42 @@
 #ifndef RPIGPS_H
 #define RPIGPS_H
 
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <ctime>
-#include <string>
-#include <math.h>
 #include <memory>
+#include <libnova/libnova.h>
+#include <time.h>
 #include <libgpsmm.h>
+#include "indigps.h"
 
-#include <defaultdevice.h>
-
-class IndiRpigps : public INDI::DefaultDevice
+class IndiRpigps : public INDI::GPS
 {
 protected:
 private:
-	int timerid;
-	int counter;
 	gpsmm* gpsHandle;
-	INDI::BaseDevice * telescope;
+	struct gps_data_t* gpsData;
 public:
-	INumber GPSmodeN[1];
-	INumberVectorProperty GPSmodeNP;
-
-	IText GPStimeT[1];
-	ITextVectorProperty GPStimeTP;
-
-	INumber GPSlocationN[3];
-	INumberVectorProperty GPSlocationNP;
-
-	ISwitch GPSsetS[2];
-	ISwitchVectorProperty GPSsetSP;
-
-	IText LOCtimeT[2];
-	ITextVectorProperty LOCtimeTP;
-
-	IText TimeT[2];
-	ITextVectorProperty TimeTP;
-	
-	INumber LocationN[3];	
-	INumberVectorProperty LocationNP;
-
     IndiRpigps();
 	virtual ~IndiRpigps();
 
+	INumber GPSmodeN[1];
+	INumberVectorProperty GPSmodeNP;
+
+	INumber PolarisHN[1];
+	INumberVectorProperty PolarisHNP;
+
+	ISwitch GPSupdateS[1];
+	ISwitchVectorProperty GPSupdateSP;
+
 	virtual const char *getDefaultName();
+
+	virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
 
 	virtual void TimerHit();
 	virtual bool Connect();
 	virtual bool Disconnect();
 	virtual bool initProperties();
 	virtual bool updateProperties();
-	virtual void ISGetProperties(const char *dev);
-	virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
-	virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
-	virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
-	virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
-	virtual bool ISSnoopDevice(XMLEle *root);
-
-	virtual bool updateLocal();
+		
 	virtual bool updateGPS();
-	virtual bool updateLocation();
-	virtual bool updateTime();
 };
 
 #endif
