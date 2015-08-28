@@ -81,6 +81,7 @@ void ISSnoopDevice (XMLEle *root)
 }
 IndiRpialtimu::IndiRpialtimu()
 {
+		setVersion(1,1);
 }
 IndiRpialtimu::~IndiRpialtimu()
 {
