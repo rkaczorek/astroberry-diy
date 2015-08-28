@@ -4,10 +4,16 @@ This package provides the INDI drivers for Raspberry Pi devices:
 * Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus with INDI client such as KStars and Ekos
 * Astroberry GPS - GPS driver for easy scope location and UTC time setting
 * Astroberry AltIMU - accelerometer, magnetometer, gyro, atmospheric pressure sensor driver
-* Astroberry Board - power switch board allowing for remote powering on/off up to 4 devices.
+* Astroberry Board - power switch board allowing for remote powering on/off up to 4 devices and monitor system parameters
 
 Changelog
 ============
+v1.0.3
+indi_rpigps	-	Sync to latest INDI::GPS changes
+indi_rpibrd	-	Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
+indi_rpifocus	-	Code improvements
+
+
 v1.0.2
 indi_rpigps     -       Rewrite fo the driver to sync with libindi changes (GPS::INDI)
 indi_rpigs	-	Adding Polaris Hour Angle for easy polar alignment
