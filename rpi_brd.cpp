@@ -81,6 +81,8 @@ void ISSnoopDevice (XMLEle *root)
 }
 IndiRpibrd::IndiRpibrd()
 {
+	setVersion(2,1);
+
     if (!bcm2835_init())
     {
 		IDLog("Problem initiating Astroberry Board.");
@@ -112,6 +114,7 @@ IndiRpibrd::~IndiRpibrd()
 }
 bool IndiRpibrd::Connect()
 {
+	SetTimer(1000);
 /*
 	if ( !IndiRpibrd::LoadLines() )
 	{
@@ -143,8 +146,76 @@ void IndiRpibrd::TimerHit()
 {
 	if(isConnected())
 	{
-		IDMessage(getDeviceName(), "Halting system. Bye bye.");
-		system("shutdown -h now");
+		// update gps time
+		struct tm *local_timeinfo;
+		static char ts[32];
+		time_t rawtime;
+		time(&rawtime);
+		local_timeinfo = localtime (&rawtime);
+		strftime(ts, 20, "%Y-%m-%dT%H:%M:%S", local_timeinfo);
+		IUSaveText(&SysTimeT[0], ts);
+		snprintf(ts, sizeof(ts), "%4.2f", (local_timeinfo->tm_gmtoff/3600.0));
+		IUSaveText(&SysTimeT[1], ts);
+		SysTimeTP.s = IPS_OK;
+		IDSetText(&SysTimeTP, NULL);
+
+
+		if ( counter == 0 )
+		{
+			SysInfoTP.s = IPS_BUSY;
+			IDSetText(&SysInfoTP, NULL);
+
+			FILE* pipe;
+			char buffer[128];
+			
+			//update Hardware
+			pipe = popen("cat /proc/cpuinfo|grep Hardware|awk -F: '{print $2}'", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[0], buffer);
+
+			//update uptime
+			pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);		
+			IUSaveText(&SysInfoT[1], buffer);
+
+			//update load
+			pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);		
+			IUSaveText(&SysInfoT[2], buffer);
+
+			//update Hostname
+			pipe = popen("hostname", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[3], buffer);
+
+			//update Local IP
+			pipe = popen("hostname -I", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[4], buffer);
+
+			//update Public IP
+			pipe = popen("dig +short myip.opendns.com @resolver1.opendns.com", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[5], buffer);
+
+			SysInfoTP.s = IPS_OK;
+			IDSetText(&SysInfoTP, NULL);
+
+			// reset system halt/restart button
+			Switch0SP.s = IPS_IDLE;
+			IDSetSwitch(&Switch0SP, NULL);
+						
+			counter = 10;
+		}
+		counter--;
+		
+		SetTimer(1000);
     }
 }
 const char * IndiRpibrd::getDefaultName()
@@ -156,12 +227,25 @@ bool IndiRpibrd::initProperties()
     // We init parent properties first
     INDI::DefaultDevice::initProperties();
 
-    IUFillSwitch(&Switch0S[0], "SW0ON", "Shutdown", ISS_OFF);
-    IUFillSwitchVector(&Switch0SP, Switch0S, 1, getDeviceName(), "SWITCH_0", "System", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
+    IUFillText(&SysTimeT[0],"LOCAL_TIME","Local Time",NULL);
+    IUFillText(&SysTimeT[1],"UTC_OFFSET","UTC Offset",NULL);
+    IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
+
+    IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);    
+    IUFillText(&SysInfoT[1],"UPTIME","Uptime (hh:mm)",NULL);
+    IUFillText(&SysInfoT[2],"LOAD","Load (1/5/15 min.)",NULL);
+    IUFillText(&SysInfoT[3],"HOSTNAME","Hostname",NULL);
+    IUFillText(&SysInfoT[4],"LOCAL_IP","Local IP",NULL);
+    IUFillText(&SysInfoT[5],"PUBLIC_IP","Public IP",NULL);
+    IUFillTextVector(&SysInfoTP,SysInfoT,6,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
+    
+    IUFillSwitch(&Switch0S[0], "SW0HALT", "Shutdown", ISS_OFF);
+    IUFillSwitch(&Switch0S[1], "SW0REBOOT", "Restart", ISS_OFF);
+    IUFillSwitchVector(&Switch0SP, Switch0S, 2, getDeviceName(), "SWITCH_0", "System", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     IUFillSwitch(&Switch1S[0], "SW1ON", "Power ON", ISS_OFF);
     IUFillSwitch(&Switch1S[1], "SW1OFF", "Power OFF", ISS_ON);
-    IUFillSwitchVector(&Switch1SP, Switch1S, 2, getDeviceName(), "SWITCH_1", "Line A: 5V", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
+    IUFillSwitchVector(&Switch1SP, Switch1S, 2, getDeviceName(), "SWITCH_1", "Line A: 5V", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     IUFillSwitch(&Switch2S[0], "SW2ON", "Power ON", ISS_OFF);
     IUFillSwitch(&Switch2S[1], "SW2OFF", "Power OFF", ISS_ON);
@@ -184,6 +268,8 @@ bool IndiRpibrd::updateProperties()
 
     if (isConnected())
     {
+		defineText(&SysTimeTP);
+		defineText(&SysInfoTP);
 		defineSwitch(&Switch0SP);
 		defineSwitch(&Switch1SP);
 		defineSwitch(&Switch2SP);
@@ -193,6 +279,8 @@ bool IndiRpibrd::updateProperties()
     else
     {
 		// We're disconnected
+		deleteProperty(SysTimeTP.name);
+		deleteProperty(SysInfoTP.name);
 		deleteProperty(Switch0SP.name);
 		deleteProperty(Switch1SP.name);
 		deleteProperty(Switch2SP.name);
@@ -222,24 +310,46 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 		{
 			IUUpdateSwitch(&Switch0SP, states, names, n);
 
-			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_OK )
+			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_IDLE )
 			{
-				IDMessage(getDeviceName(), "System is going to shutdown. Click again within 10 seconds to abort.");
-				Switch0SP.s = IPS_BUSY;
+				IDMessage(getDeviceName(), "System is going to shutdown. Click again to confirm.");
+				Switch0S[0].s = ISS_OFF;
+				Switch0SP.s = IPS_ALERT;
 				IDSetSwitch(&Switch0SP, NULL);
-				timerid = SetTimer ( 10000 );
+
 				return true;
 			}
 
-			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_BUSY )
+			if ( Switch0S[1].s == ISS_ON && Switch0SP.s == IPS_IDLE )
 			{
-				IDMessage(getDeviceName(), "System shutdown aborted.");
-				Switch0S[0].s = ISS_OFF;
-				Switch0SP.s = IPS_OK;
+				IDMessage(getDeviceName(), "System is going to restart. Click again to confirm.");
+				Switch0S[1].s = ISS_OFF;
+				Switch0SP.s = IPS_ALERT;
 				IDSetSwitch(&Switch0SP, NULL);
-				RemoveTimer(timerid);
+
 				return true;
 			}
+
+			if ( Switch0S[0].s == ISS_ON && Switch0SP.s == IPS_ALERT )
+			{
+				Switch0SP.s = IPS_IDLE;
+				IDSetSwitch(&Switch0SP, NULL);
+				IDMessage(getDeviceName(), "Halting system. Bye bye.");
+				system("shutdown -h now");
+
+				return true;
+			}
+
+			if ( Switch0S[1].s == ISS_ON && Switch0SP.s == IPS_ALERT )
+			{
+				Switch0SP.s = IPS_IDLE;
+				IDSetSwitch(&Switch0SP, NULL);
+				IDMessage(getDeviceName(), "Restarting system. See you soon.");
+				system("shutdown -r now");
+
+				return true;
+			}
+
 
 		}
 
@@ -370,7 +480,7 @@ bool IndiRpibrd::saveConfigItems(FILE *fp)
 }
 bool IndiRpibrd::LoadLines()
 {
-	// load line 1 state - default OFF
+	// load line 1 state
 	if ( bcm2835_gpio_lev(IN1) == LOW )
 	{
 		Switch1S[0].s = ISS_ON;

@@ -19,14 +19,22 @@
 #ifndef RPIBRD_H
 #define RPIBRD_H
 
+#include <string>
+#include <iostream>
+#include <stdio.h>
+
 #include <defaultdevice.h>
 
 class IndiRpibrd : public INDI::DefaultDevice
 {
 protected:
 private:
-	int timerid;
-	ISwitch Switch0S[1];
+	int counter;
+    IText SysTimeT[2];
+    ITextVectorProperty SysTimeTP;
+    IText SysInfoT[6];
+    ITextVectorProperty SysInfoTP;
+	ISwitch Switch0S[2];
 	ISwitchVectorProperty Switch0SP;
 	ISwitch Switch1S[2];
 	ISwitchVectorProperty Switch1SP;
