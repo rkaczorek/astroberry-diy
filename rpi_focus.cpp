@@ -113,7 +113,7 @@ void ISSnoopDevice (XMLEle *root)
 
 FocusRpi::FocusRpi()
 {
-
+	setVersion(2,1);
 }
 
 FocusRpi::~FocusRpi()
@@ -246,9 +246,6 @@ bool FocusRpi::updateProperties()
 		defineNumber(&FocusBacklashNP);
 		defineSwitch(&FocusParkingSP);
 		defineSwitch(&FocusResetSP);
-
-		loadConfig();
-
     }
     else
     {
