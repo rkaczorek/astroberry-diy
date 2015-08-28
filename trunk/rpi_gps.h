@@ -35,26 +35,19 @@ public:
     IndiRpigps();
 	virtual ~IndiRpigps();
 
-	INumber GPSmodeN[1];
-	INumberVectorProperty GPSmodeNP;
+	IText GPSstatusT[1];
+	ITextVectorProperty GPSstatusTP;
 
-	INumber PolarisHN[1];
-	INumberVectorProperty PolarisHNP;
-
-	ISwitch GPSupdateS[1];
-	ISwitchVectorProperty GPSupdateSP;
+	INumber PolarisN[1];
+	INumberVectorProperty PolarisNP;
 
 	virtual const char *getDefaultName();
 
-	virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
-
-	virtual void TimerHit();
 	virtual bool Connect();
 	virtual bool Disconnect();
 	virtual bool initProperties();
 	virtual bool updateProperties();
-		
-	virtual bool updateGPS();
+	virtual IPState updateGPS();
 };
 
 #endif

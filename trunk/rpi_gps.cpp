@@ -18,11 +18,12 @@
 
 #include "rpi_gps.h"
 
-
-#define POLLMS 1000
-
 // We declare an auto pointer to IndiRpigps
 std::auto_ptr<IndiRpigps> indiRpigps(0);
+
+// gps read delay adjustment in seconds (added to gps time read from device)
+// when set to 0 gps time will be late due to lag in reading gps data
+#define GPS_LAG 5;
 
 void ISInit()
 {
@@ -79,7 +80,7 @@ void ISSnoopDevice (XMLEle *root)
 
 IndiRpigps::IndiRpigps()
 {
-	setVersion(2,0);
+	setVersion(2,1);
 }
 
 IndiRpigps::~IndiRpigps()
@@ -91,41 +92,23 @@ bool IndiRpigps::Connect()
 	// init GPS receiver
 	gpsHandle = new gpsmm("localhost", DEFAULT_GPSD_PORT);
 
-	if (gpsHandle->stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
+	if (gpsHandle->stream(WATCH_ENABLE|WATCH_JSON|WATCH_PPS) == NULL) {
 		IDMessage(getDeviceName(), "Error connecting to GPSD service.");
 		return false;
 	}
-	
-	//// reset values
-	GPSmodeN[0].value = 0;
-	IDSetNumber(&GPSmodeNP, NULL);
-	PolarisHN[0].value = 0;
-	IDSetNumber(&PolarisHNP, NULL);
 
-	// start timer
-	SetTimer( POLLMS );
-	
-    IDMessage(getDeviceName(), "Astroberry GPS connected successfully.");
+    IDMessage(getDeviceName(), "GPS connected successfully.");
     return true;
 }
 
 bool IndiRpigps::Disconnect()
 {
 	// disconnect GPS receiver
-	gpsHandle->~gpsmm();
+	if ( gpsData != NULL )
+		gpsHandle->~gpsmm();
 
-    IDMessage(getDeviceName(), "Astroberry GPS disconnected successfully.");
+    IDMessage(getDeviceName(), "GPS disconnected successfully.");
     return true;
-}
-
-void IndiRpigps::TimerHit()
-{
-	if(isConnected())
-	{
-		// update gps data
-		updateGPS();
-		SetTimer( POLLMS );
-    }
 }
 
 const char * IndiRpigps::getDefaultName()
@@ -138,15 +121,11 @@ bool IndiRpigps::initProperties()
     // We init parent properties first
     INDI::GPS::initProperties();
 
-    IUFillNumber(&GPSmodeN[0],"GPS_FIX","Fix Mode","%0.0f",0,5,1,0 );
-    IUFillNumberVector(&GPSmodeNP,GPSmodeN,1,getDeviceName(),"GPS_MODE","GPS Status",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
+    IUFillText(&GPSstatusT[0],"GPS_FIX","Fix Mode",NULL);
+    IUFillTextVector(&GPSstatusTP,GPSstatusT,1,getDeviceName(),"GPS_STATUS","GPS Status",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
-    IUFillNumber(&PolarisHN[0],"HOUR_ANGLE","Polaris Hour Angle","%010.6m",0,23,0,0.0);
-    IUFillNumberVector(&PolarisHNP,PolarisHN,1,getDeviceName(),"POLARIS_HA","Polaris HA",MAIN_CONTROL_TAB,IP_RO,60,IPS_OK);
-
-    IUFillSwitch(&GPSupdateS[0], "GPS_AUTO", "Enable", ISS_ON);
-    IUFillSwitchVector(&GPSupdateSP, GPSupdateS, 1, getDeviceName(), "GPS_UPDATE", "Auto refresh", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_OK);
-	
+    IUFillNumber(&PolarisN[0],"HA","Polaris Hour Angle","%010.6m",0,24,0,0.0);
+    IUFillNumberVector(&PolarisNP,PolarisN,1,getDeviceName(),"POLARIS","Polaris",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
     return true;
 }
@@ -159,151 +138,116 @@ bool IndiRpigps::updateProperties()
     if (isConnected())
     {
 		deleteProperty(RefreshSP.name);
-        defineNumber(&GPSmodeNP);
-        defineNumber(&PolarisHNP);
-        defineSwitch(&GPSupdateSP);
-        //defineSwitch(&RefreshSP);
+        defineText(&GPSstatusTP);
+        defineNumber(&PolarisNP);
+        defineSwitch(&RefreshSP);        
     }
     else
     {
 		// We're disconnected
-        deleteProperty(GPSmodeNP.name);
-        deleteProperty(PolarisHNP.name);
-        deleteProperty(GPSupdateSP.name);
+        deleteProperty(GPSstatusTP.name);
+        deleteProperty(PolarisNP.name);
     }
     return true;
 }
 
-bool IndiRpigps::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
+IPState IndiRpigps::updateGPS()
 {
-	// first we check if it's for our device
-    if (!strcmp(dev, getDeviceName()))
-    {
-		// handle sync with scope
-		if(!strcmp(name, GPSupdateSP.name))
-		{			
-			if ( GPSupdateS[0].s == ISS_ON )
-			{
-				IDMessage(getDeviceName(), "Astroberry GPS refresh disabled.");
-				GPSupdateS[0].s = ISS_OFF;
-				GPSupdateSP.s = IPS_BUSY;
-			} else {
-				IDMessage(getDeviceName(), "Astroberry GPS refresh enabled.");
-				GPSupdateS[0].s = ISS_ON;
-				GPSupdateSP.s = IPS_OK;
-			}
-			IDSetSwitch(&GPSupdateSP, NULL);
+	if ( gpsData == NULL )
+	{
+		gpsHandle = new gpsmm("localhost", DEFAULT_GPSD_PORT);
+		if (gpsHandle->stream(WATCH_ENABLE|WATCH_JSON|WATCH_PPS) == NULL) {
+			IDMessage(getDeviceName(), "Error connecting to GPSD service.");
+			return IPS_ALERT;
 		}
 	}
-	return INDI::GPS::ISNewSwitch (dev, name, states, names, n);
-}
 
-
-bool IndiRpigps::updateGPS()
-{
-//	if ( !gpsHandle->waiting(50000000) )
-//		return false;
-
-	if ((gpsData = gpsHandle->read()) == NULL || gpsData->fix.mode < 1)
+	if ( !gpsHandle->waiting(50000000) || (gpsData = gpsHandle->read()) == NULL )
 	{
-		GPSmodeNP.s = IPS_BUSY;
-		IDSetNumber(&GPSmodeNP, NULL);
-		return false;
+		GPSstatusTP.s = IPS_BUSY;
+		IDSetText(&GPSstatusTP, NULL);
+		return IPS_BUSY;
 	}
 
-	// detect 3d fix
-	if (GPSmodeN[0].value < gpsData->fix.mode && gpsData->fix.mode == 3)
-		IDMessage(getDeviceName(), "Astroberry GPS 3D FIX obtained.");
+	// lock refresh button
+	RefreshSP.s = IPS_BUSY;
+	IDSetSwitch(&RefreshSP, NULL);
 
-	// detect 3d fix lost
-	if (GPSmodeN[0].value > gpsData->fix.mode && gpsData->fix.mode < 3)
-		IDMessage(getDeviceName(), "Astroberry GPS 3D FIX lost.");
+	// detect gps fix
+	if (GPSstatusT[0].text == "NO FIX" && gpsData->fix.mode > 2)
+		IDMessage(getDeviceName(), "GPS fix obtained.");
 		
 	//// update gps status
-	GPSmodeN[0].value = gpsData->fix.mode;
-	GPSmodeNP.s = IPS_OK;
-	IDSetNumber(&GPSmodeNP, NULL);
+	if ( gpsData->fix.mode >= 3 )
+	{
+		GPSstatusT[0].text = (char*) "3D FIX";
+		GPSstatusTP.s = IPS_OK;
+		IDSetText(&GPSstatusTP, NULL);
+	}
+	else if ( gpsData->fix.mode == 2 )
+	{
+		GPSstatusT[0].text = (char*) "2D FIX";
+		GPSstatusTP.s = IPS_OK;
+		IDSetText(&GPSstatusTP, NULL);
+		return IPS_BUSY;
+	}
+	else
+	{	
+		GPSstatusT[0].text = (char*) "NO FIX";
+		GPSstatusTP.s = IPS_BUSY;
+		IDSetText(&GPSstatusTP, NULL);
+		return IPS_BUSY;
+	}
 
-	// skip if auto refresh is disabled
-	if ( GPSupdateS[0].s == ISS_OFF )
-		return false;
-	
 	// update gps time
 	struct tm *utc_timeinfo, *local_timeinfo;
 	static char ts[32];
 	time_t rawtime;
 
-	if ( gpsData->fix.mode >= 1 )
-	{
-		TimeTP.s = IPS_BUSY;
-		IDSetText(&TimeTP, NULL);
+	// get utc_time from gps
+	rawtime = gpsData->fix.time;
+	
+	// fix for gps time delay at update
+	//rawtime += GPS_LAG;
+	
+	utc_timeinfo = gmtime (&rawtime);
+	
+	strftime(ts, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
+	IUSaveText(&TimeT[0], ts);
 
-		// get utc_time from gps
-		rawtime = gpsData->fix.time;
-		utc_timeinfo = gmtime (&rawtime);
-		strftime(ts, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
-		IUSaveText(&TimeT[0], ts);
-
-		// get utc offset
-		local_timeinfo = localtime (&rawtime);
-		snprintf(ts, sizeof(ts), "%4.2f", (local_timeinfo->tm_gmtoff/3600.0));
-		IUSaveText(&TimeT[1], ts);
-		
-		TimeTP.s = IPS_OK;		
-		IDSetText(&TimeTP, NULL);
-	}
+	// get utc offset
+	local_timeinfo = localtime (&rawtime);
+	snprintf(ts, sizeof(ts), "%4.2f", (local_timeinfo->tm_gmtoff/3600.0));
+	IUSaveText(&TimeT[1], ts);
 	
 	// update gps location
-	if ( gpsData->fix.mode >= 3 )
-	{
-		LocationNP.s = IPS_BUSY;
-		IDSetNumber(&LocationNP, NULL);
-				  
-		// update INDI values
-		LocationN[0].value = gpsData->fix.latitude;
-		LocationN[1].value = gpsData->fix.longitude;
-		LocationN[2].value = gpsData->fix.altitude;
+	LocationN[0].value = gpsData->fix.latitude;
+	LocationN[1].value = gpsData->fix.longitude;
+	LocationN[2].value = gpsData->fix.altitude;
 
-		LocationNP.s = IPS_OK;
-		IDSetNumber(&LocationNP, NULL);
+	GPSstatusTP.s = IPS_IDLE;
+	IDSetText(&GPSstatusTP, NULL);
 
-		// calculate Polaris HA
-		double jd, lst;
-		char* siderealtime;
-		
-		// polaris location - RA 02h 31m 47s DEC 89° 15' 50'' (J2000)
-		jd = ln_get_julian_from_sys();
-		lst=ln_get_apparent_sidereal_time(jd);
+	// calculate Polaris HA
+	double jd, lst, polarislsrt;
+	
+	// polaris location - RA 02h 31m 47s DEC 89° 15' 50'' (J2000)
+	jd = ln_get_julian_from_timet(&rawtime);
+	lst=ln_get_apparent_sidereal_time(jd);
 
-		// Local Hour Angle = Local Sidereal Time - Polaris Right Ascension
-		double polarislsrt = lst - 2.529722222 + (gpsData->fix.longitude / 15.0);	
+	// Local Hour Angle = Local Sidereal Time - Polaris Right Ascension
+	polarislsrt = lst - 2.529722222 + (gpsData->fix.longitude / 15.0);	
 
-		PolarisHN[0].value = polarislsrt;
-		IDSetNumber(&PolarisHNP, NULL);
+	PolarisN[0].value = polarislsrt;
+	IDSetNumber(&PolarisNP, NULL);
 
-		// Polaris transit time ----------------- TODO: add text field, set values below
-	/*
-		struct ln_lnlat_posn observer;
-		struct ln_equ_posn polaris;
-		struct ln_rst_time rst;
-		struct ln_zonedate transit;
-		
-		jd = ln_get_julian_from_sys();
+	// release refresh button
+	RefreshSP.s = IPS_IDLE;
+	IDSetSwitch(&RefreshSP, NULL);
 
-		// observers location
-		observer.lat = gpsData->fix.latitude;
-		observer.lng = gpsData->fix.longitude;
+	// close gps and clear data
+	gpsHandle->~gpsmm();
+	gpsData = NULL;
 
-		// polaris location - RA 02h 31m 47s DEC 89° 15' 50'' (J2000)
-		polaris.ra = 2.529722222;
-		polaris.dec = 89.263888889;
-		
-		// check transit time only		
-		ln_get_object_rst (jd, &observer, &polaris, &rst);
-		ln_get_local_date(rst.transit, &transit);
-		IDMessage(getDeviceName(), "Polaris Transit Time %d:%d:%f", transit.hours, transit.minutes, transit.seconds);
-	*/	
-	}
-
-    return true;
+    return IPS_OK;
 }
