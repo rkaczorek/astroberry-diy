@@ -203,22 +203,20 @@ bool FocusRpi::initProperties()
 	IUFillNumber(&FocusBacklashN[0], "FOCUS_BACKLASH_VALUE", "Steps", "%0.0f", 0, (int)(MAX_STEPS/100), (int)(MAX_STEPS/1000), 0);
 	IUFillNumberVector(&FocusBacklashNP, FocusBacklashN, 1, getDeviceName(), "FOCUS_BACKLASH", "Backlash", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
-    IUFillSwitch(&FocusResetS[0],"FOCUS_RESET","Reset",ISS_OFF);
-    IUFillSwitchVector(&FocusResetSP,FocusResetS,1,getDeviceName(),"FOCUS_RESET","Position Reset",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
+	IUFillSwitch(&FocusResetS[0],"FOCUS_RESET","Reset",ISS_OFF);
+	IUFillSwitchVector(&FocusResetSP,FocusResetS,1,getDeviceName(),"FOCUS_RESET","Position Reset",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
 
-    IUFillSwitch(&FocusParkingS[0],"FOCUS_PARKON","Enable",ISS_OFF);
-    IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
-    IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
-	
+	IUFillSwitch(&FocusParkingS[0],"FOCUS_PARKON","Enable",ISS_OFF);
+	IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
+	IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
+
 	// set capabilities
-	
-    FocuserCapability cap;
-    cap.canAbsMove=true;
-    cap.canRelMove=true;
-    cap.variableSpeed=true;
-    cap.canAbort=false;
+        SetFocuserCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
 
-    SetFocuserCapability(&cap);
+        controller->mapController("Focus In", "Focus In", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_1");
+        controller->mapController("Focus Out", "Focus Out", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_2");
+        controller->mapController("Abort Focus", "Abort Focus", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_3");
+        controller->initProperties();
 
     return true;
 }
