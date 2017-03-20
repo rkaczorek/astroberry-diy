@@ -23,7 +23,7 @@
 #include "rpi_focus.h"
 
 // We declare an auto pointer to focusRpi.
-std::auto_ptr<FocusRpi> focusRpi(0);
+std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 
 // Stepper motor takes 4 miliseconds to move one step = 250 steps per second (real rate = 240,905660377)
 // 1) focusing from min to max takes 7 evolutions
@@ -183,9 +183,6 @@ bool FocusRpi::Disconnect()
 bool FocusRpi::initProperties()
 {
     INDI::Focuser::initProperties();
-
-    IUFillText(&PortT[0], "PORT", "Port","RPi GPIO");
-    IUFillTextVector(&PortTP,PortT,1,getDeviceName(),"DEVICE_PORT","Ports",OPTIONS_TAB,IP_RO,0,IPS_OK);
 
     IUFillNumber(&FocusAbsPosN[0],"FOCUS_ABSOLUTE_POSITION","Ticks","%0.0f",0,MAX_STEPS,(int)MAX_STEPS/100,0);
     IUFillNumberVector(&FocusAbsPosNP,FocusAbsPosN,1,getDeviceName(),"ABS_FOCUS_POSITION","Position",MAIN_CONTROL_TAB,IP_RW,0,IPS_OK);
@@ -424,12 +421,11 @@ bool FocusRpi::ISSnoopDevice (XMLEle *root)
 
 bool FocusRpi::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigText(fp, &PortTP);
     IUSaveConfigNumber(fp, &FocusRelPosNP);
     IUSaveConfigNumber(fp, &PresetNP);
     IUSaveConfigNumber(fp, &FocusBacklashNP);
 	IUSaveConfigSwitch(fp, &FocusParkingSP);
-    
+
     if ( FocusParkingS[0].s == ISS_ON )
 		IUSaveConfigNumber(fp, &FocusAbsPosNP);
 
