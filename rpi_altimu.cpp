@@ -28,7 +28,7 @@
 #define POLLMS 500
 
 // We declare an auto pointer to IndiRpialtimu
-std::auto_ptr<IndiRpialtimu> indiRpialtimu(0);
+std::unique_ptr<IndiRpialtimu> indiRpialtimu(new IndiRpialtimu());
 
 void ISPoll(void *p);
 void ISInit()

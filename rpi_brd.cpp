@@ -23,7 +23,7 @@
 #include "rpi_brd.h"
 
 // We declare an auto pointer to IndiRpibrd
-std::auto_ptr<IndiRpibrd> indiRpibrd(0);
+std::unique_ptr<IndiRpibrd> indiRpibrd(new IndiRpibrd());
 
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
 #define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5

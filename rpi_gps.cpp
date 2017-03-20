@@ -19,7 +19,7 @@
 #include "rpi_gps.h"
 
 // We declare an auto pointer to IndiRpigps
-std::auto_ptr<IndiRpigps> indiRpigps(0);
+std::unique_ptr<IndiRpigps> indiRpigps(new IndiRpigps());
 
 // gps read delay adjustment in seconds (added to gps time read from device)
 // when set to 0 gps time will be late due to lag in reading gps data
