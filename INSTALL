@@ -11,8 +11,8 @@ You must have CMake >= 2.4.7 in order to build this package.
 6) $ su -c 'make install' OR sudo make install
 
 
-SPECIFIC STEPS
-================
+YOU CANNOT COMPILE?
+=====================
 Astroberry drivers require INDI suite installed BEFORE driver installation. Drivers integrate into Raspberry Pi
 system with GPIOs (bcm2835 library is statically compiled so you don't need to install it). If you want to use AltIMU driver you need rtmimulib installed.
 
