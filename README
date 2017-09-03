@@ -39,8 +39,8 @@ all		- Initial release of astroberry drivers
 Requirements
 ============
 * INDI available here http://indilib.org/download.html
-* RTIMULib (for Astroberry AltIMU) available here https://github.com/richards-tech/RTIMULib
-# bcm2835 (for Astroberry Focuser and Astroberry Board) available here http://www.airspayce.com/mikem/bcm2835/
+* RTIMULib (for Astroberry AltIMU) available here https://github.com/RPi-Distro/RTIMULib
+* bcm2835 (for Astroberry Focuser and Astroberry Board) available here http://www.airspayce.com/mikem/bcm2835/
 
 Installation
 ============
