@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <memory>
 #include <bcm2835.h>
+#include <string.h>
 
 #include "rpi_brd.h"
 

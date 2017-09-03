@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 2.4.7)
+
+if(COMMAND cmake_policy)
+    cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
+
 PROJECT(astroberry CXX C)
+include(ExternalProject)
 
 set (VERSION_MAJOR 1)
 set (VERSION_MINOR 0)
@@ -16,6 +22,24 @@ find_package(INDI REQUIRED)
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
+
+include_directories(${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src)
+
+add_library(bcm2835 STATIC IMPORTED)
+set_property(TARGET bcm2835 PROPERTY IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src/libbcm2835.a)
+add_dependencies(bcm2835 libbcm2835)
+
+################ libbcm2835 ################
+
+ExternalProject_Add(libbcm2835
+    URL "http://www.airspayce.com/mikem/bcm2835/bcm2835-1.52.tar.gz"
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/bcm2835-1.52
+    CONFIGURE_COMMAND ./configure
+    BUILD_COMMAND ${MAKE}
+    INSTALL_COMMAND ""
+    BUILD_IN_SOURCE 1
+)
 
 
 ################ Astroberry Board ################

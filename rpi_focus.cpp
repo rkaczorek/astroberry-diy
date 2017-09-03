@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <memory>
 #include <bcm2835.h>
+#include <string.h>
 
 #include "rpi_focus.h"
 
@@ -210,11 +211,6 @@ bool FocusRpi::initProperties()
 	// set capabilities
         SetFocuserCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
 
-        controller->mapController("Focus In", "Focus In", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_1");
-        controller->mapController("Focus Out", "Focus Out", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_2");
-        controller->mapController("Abort Focus", "Abort Focus", INDI::Controller::CONTROLLER_BUTTON, "BUTTON_3");
-        controller->initProperties();
-
     return true;
 }
 
@@ -386,7 +382,6 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 			}
             FocusResetS[0].s = ISS_OFF;
             IDSetSwitch(&FocusResetSP, NULL);
-			
 			return true;
 		}
 
@@ -407,15 +402,12 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
             IDSetSwitch(&AbortSP, NULL);
             return true;
         }
-        
     }
     return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
 }
 
 bool FocusRpi::ISSnoopDevice (XMLEle *root)
 {
-    controller->ISSnoopDevice(root);
-
     return INDI::Focuser::ISSnoopDevice(root);
 }
 
@@ -428,8 +420,6 @@ bool FocusRpi::saveConfigItems(FILE *fp)
 
     if ( FocusParkingS[0].s == ISS_ON )
 		IUSaveConfigNumber(fp, &FocusAbsPosNP);
-
-    controller->saveConfigItems(fp);
 
     return true;
 }

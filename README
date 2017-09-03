@@ -1,4 +1,4 @@
-INDI Astroberry 1.0.4
+INDI Astroberry 1.0.5
 =================================
 This package provides the INDI drivers for Raspberry Pi devices:
 * Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus with INDI client such as KStars and Ekos
@@ -8,6 +8,10 @@ This package provides the INDI drivers for Raspberry Pi devices:
 
 Changelog
 ============
+v1.0.5
+all		-	Sync to latest libindi changes. Focuser controller mapping removed
+other		-	Adding bcm2835-1.52 lib and setting statical linking
+
 v1.0.4
 indi_rpifocus	-	Sync to latest libindi changes. Focuser controller mapping added
 other		-	FindINDI/cmake updated to the latest version
@@ -44,13 +48,12 @@ See INSTALL
 
 Source
 ===========
-http://astroberry.sourceforge.net
+https://github.com/rkaczorek/astroberry-diy
 
 How to Use
 ==========
-Once installed, the Astroberry INDI drivers can be used by an INDI client such as
-KStars (Ekos) or OpenPHD. It can also be used manually by invoking it via the 
-indi_server:
+Once installed, the Astroberry INDI drivers can be used by an INDI client such as. 
+It can also be used manually by invoking it via the indi_server:
 $ indi_server indi_rpialtimu indi_rpigps indi_rpifocus indi_rpibrd
 
 
