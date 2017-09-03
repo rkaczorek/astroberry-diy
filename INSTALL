@@ -3,24 +3,18 @@ GENERIC INSTALL
 
 You must have CMake >= 2.4.7 in order to build this package.
 
-1) $ svn checkout svn://svn.code.sf.net/p/astroberry/svn/trunk/ astroberry-svn
-2) $ mkdir indi-astroberry
-3) $ cd indi-astroberry
-4) $ cmake -DCMAKE_INSTALL_PREFIX=/usr ../astroberry-svn
+1) $ git clone https://github.com/rkaczorek/astroberry-diy.git
+2) $ cd astroberry-diy
+3) $ mkdir build && cd build
+4) $ cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 5) $ make
 6) $ su -c 'make install' OR sudo make install
 
 
-DEBIAN PACKAGE
-================
-1) Download latest binary package from http://sourceforge.net/projects/astroberry/files/Astroberry/
-2) Install downloaded package $ dpkg -i indi-astroberry_*.deb
-
 SPECIFIC STEPS
 ================
 Astroberry drivers require INDI suit installed BEFORE driver installation. Drivers integrate into Raspberry Pi
-system with GPIOs so bcm2835 library installed is a must. If you want to use AltIMU driver you also need rtmimulib installed.
-Both of them need to be compiled from source.
+system with GPIOs (bcm2835 library is statically compiled so you don't need to install it). If you want to use AltIMU driver you need rtmimulib installed.
 
 Do the following steps for full installation and configuration
 
@@ -46,7 +40,7 @@ Add GPSD_OPTIONS="-n -G" to /etc/default/gpsd
 Add DEVICES="/dev/ttyAMA0" to /etc/default/gpsd
 
 6) Install support for GPIO and AltIMU
-Compile and install bcm2835 library and rtmimulib library
+Compile and/or install rtmimulib library
 
 7) Enable device tree for GPIO support
 $ echo "" >> /boot/config.txt
