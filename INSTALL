@@ -22,8 +22,8 @@ Do the following steps for full installation and configuration
 $ sudo apt-add-repository ppa:mutlaqja/ppa
 $ sudo apt-get update
 
-2) Install INDI
-$ sudo apt-get install indi-full
+2) Install INDI and drivers' requirements
+$ sudo apt-get install indi-full libnova-dev libgps-dev librtimulib-dev
 
 3) Install and configure gpsd support (only for rpi_gps driver)
 $ sudo apt-get install gpsd python-gps gpsd-clients
