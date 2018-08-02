@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 #include <memory>
-#include <bcm2835.h>
+#include <wiringPi.h>
 #include <string.h>
 
 #include "rpi_brd.h"
@@ -27,10 +27,10 @@
 std::unique_ptr<IndiRpibrd> indiRpibrd(new IndiRpibrd());
 
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
-#define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5
-#define IN2 RPI_BPLUS_GPIO_J8_31	// GPIO06
-#define IN3 RPI_BPLUS_GPIO_J8_33	// GPIO13
-#define IN4 RPI_BPLUS_GPIO_J8_37	// GPIO26
+#define IN1 16	// GPIO23
+#define IN2 18	// GPIO24
+#define IN3 32	// GPIO12
+#define IN4 36	// GPIO16
 
 void ISPoll(void *p);
 void ISInit()
@@ -83,32 +83,24 @@ void ISSnoopDevice (XMLEle *root)
 IndiRpibrd::IndiRpibrd()
 {
 	setVersion(2,1);
-
-    if (!bcm2835_init())
-    {
+	wiringPiSetupPhys();        
+	int ret=!wiringPiSetupPhys();
+    	if (!ret)
+   	{
 		IDLog("Problem initiating Astroberry Board.");
 		return;
 	}
 
-    // init GPIOs
-    std::ofstream exportgpio;
-    exportgpio.open("/sys/class/gpio/export");
-    exportgpio << IN1 << std::endl;
-    exportgpio << IN2 << std::endl;
-    exportgpio << IN3 << std::endl;
-    exportgpio << IN4 << std::endl;
-    exportgpio.close();
-
     // Set gpios to output mode
-    bcm2835_gpio_fsel(IN1, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(IN2, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(IN3, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(IN4, BCM2835_GPIO_FSEL_OUTP);
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    pinMode(IN3, OUTPUT);
+    pinMode(IN4, OUTPUT);
 
-	bcm2835_gpio_write(IN1, HIGH);
-	bcm2835_gpio_write(IN2, HIGH);
-	bcm2835_gpio_write(IN3, HIGH);
-	bcm2835_gpio_write(IN4, HIGH);
+	digitalWrite(IN1, HIGH);
+	digitalWrite(IN2, HIGH);
+	digitalWrite(IN3, HIGH);
+	digitalWrite(IN4, HIGH);
 }
 IndiRpibrd::~IndiRpibrd()
 {
@@ -129,17 +121,7 @@ bool IndiRpibrd::Connect()
 }
 bool IndiRpibrd::Disconnect()
 {
-/*
-    // close GPIOs
-    std::ofstream unexportgpio;
-    unexportgpio.open("/sys/class/gpio/unexport");
-    unexportgpio << IN1 << std::endl;
-    unexportgpio << IN2 << std::endl;
-    unexportgpio << IN3 << std::endl;
-    unexportgpio << IN4 << std::endl;
-    unexportgpio.close();
-    bcm2835_close();
-*/    	
+  	
     IDMessage(getDeviceName(), "Astroberry Board disconnected successfully.");
     return true;
 }
@@ -361,7 +343,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 
 			if ( Switch1S[0].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN1, LOW);
+				digitalWrite(IN1, LOW);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line A set to ON");
 				Switch1SP.s = IPS_OK;
 				Switch1S[1].s = ISS_OFF;
@@ -370,7 +352,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 			}
 			if ( Switch1S[1].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN1, HIGH);
+				digitalWrite(IN1, HIGH);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line A set to OFF");
 				Switch1SP.s = IPS_IDLE;
 				Switch1S[0].s = ISS_OFF;
@@ -386,7 +368,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 
 			if ( Switch2S[0].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN2, LOW);
+				digitalWrite(IN2, LOW);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line B set to ON");
 				Switch2SP.s = IPS_OK;
 				Switch2S[1].s = ISS_OFF;
@@ -395,7 +377,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 			}
 			if ( Switch2S[1].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN2, HIGH);
+				digitalWrite(IN2, HIGH);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line B set to OFF");
 				Switch2SP.s = IPS_IDLE;
 				Switch2S[0].s = ISS_OFF;
@@ -411,7 +393,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 
 			if ( Switch3S[0].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN3, LOW);
+				digitalWrite(IN3, LOW);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line C set to ON");
 				Switch3SP.s = IPS_OK;
 				Switch3S[1].s = ISS_OFF;
@@ -420,7 +402,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 			}
 			if ( Switch3S[1].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN3, HIGH);
+				digitalWrite(IN3, HIGH);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line C set to OFF");
 				Switch3SP.s = IPS_IDLE;
 				Switch3S[0].s = ISS_OFF;
@@ -436,7 +418,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 
 			if ( Switch4S[0].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN4, LOW);
+				digitalWrite(IN4, LOW);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line D set to ON");
 				Switch4SP.s = IPS_OK;
 				Switch4S[1].s = ISS_OFF;
@@ -445,7 +427,7 @@ bool IndiRpibrd::ISNewSwitch (const char *dev, const char *name, ISState *states
 			}
 			if ( Switch4S[1].s == ISS_ON )
 			{
-				bcm2835_gpio_write(IN4, HIGH);
+				digitalWrite(IN4, HIGH);
 				IDMessage(getDeviceName(), "Astroberry Board Power Line D set to OFF");
 				Switch4SP.s = IPS_IDLE;
 				Switch4S[0].s = ISS_OFF;
@@ -482,7 +464,7 @@ bool IndiRpibrd::saveConfigItems(FILE *fp)
 bool IndiRpibrd::LoadLines()
 {
 	// load line 1 state
-	if ( bcm2835_gpio_lev(IN1) == LOW )
+	if ( digitalRead(IN1) == LOW )
 	{
 		Switch1S[0].s = ISS_ON;
 		Switch1S[1].s = ISS_OFF;
@@ -498,7 +480,7 @@ bool IndiRpibrd::LoadLines()
 	}
 
 	// load line 2 state 
-	if ( bcm2835_gpio_lev(IN2) == LOW )
+	if ( digitalRead(IN2) == LOW )
 	{
 		Switch2S[0].s = ISS_ON;
 		Switch2S[1].s = ISS_OFF;
@@ -514,7 +496,7 @@ bool IndiRpibrd::LoadLines()
 	}
 
 	// load line 3 state 
-	if ( bcm2835_gpio_lev(IN3) == LOW )
+	if ( digitalRead(IN3) == LOW )
 	{
 		Switch3S[0].s = ISS_ON;
 		Switch3S[1].s = ISS_OFF;
@@ -530,7 +512,7 @@ bool IndiRpibrd::LoadLines()
 	}
 
 	// load line 4 state 
-	if ( bcm2835_gpio_lev(IN4) == LOW )
+	if ( digitalRead(IN4) == LOW )
 	{
 		Switch4S[0].s = ISS_ON;
 		Switch4S[1].s = ISS_OFF;
