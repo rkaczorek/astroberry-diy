@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 #include <iostream>
-#include <string>
+#include <string.h>
 #include <memory>
 #include <RTIMULib.h>
 

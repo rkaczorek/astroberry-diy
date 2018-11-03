@@ -115,6 +115,7 @@ void ISSnoopDevice (XMLEle *root)
 FocusRpi::FocusRpi()
 {
 	setVersion(2,1);
+	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
 }
 
 FocusRpi::~FocusRpi()
@@ -207,9 +208,6 @@ bool FocusRpi::initProperties()
 	IUFillSwitch(&FocusParkingS[0],"FOCUS_PARKON","Enable",ISS_OFF);
 	IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
 	IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
-
-	// set capabilities
-        SetFocuserCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
 
     return true;
 }

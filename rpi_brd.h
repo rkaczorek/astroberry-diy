@@ -19,7 +19,7 @@
 #ifndef RPIBRD_H
 #define RPIBRD_H
 
-#include <string>
+#include <string.h>
 #include <iostream>
 #include <stdio.h>
 
