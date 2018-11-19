@@ -24,11 +24,13 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src)
+include_directories(${CMAKE_SOURCE_DIR}/../gpio_lib_c/wiringPi)
 
 add_library(bcm2835 STATIC IMPORTED)
+#add_library(wiringPi DYNAMIC IMPORTED)
 set_property(TARGET bcm2835 PROPERTY IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src/libbcm2835.a)
-add_dependencies(bcm2835 libbcm2835)
-
+add_dependencies(bcm2835 libbcm2835 wiringPi)
+add_definitions(-DTINKER)
 ################ libbcm2835 ################
 
 ExternalProject_Add(libbcm2835
@@ -40,8 +42,6 @@ ExternalProject_Add(libbcm2835
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1
 )
-
-
 ################ Astroberry Board ################
 
 set(indi_rpibrd_SRCS
@@ -49,7 +49,7 @@ set(indi_rpibrd_SRCS
    )
 
 add_executable(indi_rpibrd ${indi_rpibrd_SRCS})
-target_link_libraries(indi_rpibrd indidriver bcm2835)
+target_link_libraries(indi_rpibrd indidriver bcm2835 wiringPi)
 install(TARGETS indi_rpibrd RUNTIME DESTINATION bin )
 install(FILES indi_rpibrd.xml DESTINATION ${INDI_DATA_DIR})
 
@@ -75,6 +75,7 @@ target_link_libraries(indi_rpigps indidriver gps nova)
 install(TARGETS indi_rpigps RUNTIME DESTINATION bin )
 install(FILES indi_rpigps.xml DESTINATION ${INDI_DATA_DIR})
 
+
 ################ Astroberry Focuser ################
 
 set(indi_rpifocus_SRCS
@@ -82,7 +83,7 @@ set(indi_rpifocus_SRCS
    )
 
 add_executable(indi_rpifocus ${indi_rpifocus_SRCS})
-target_link_libraries(indi_rpifocus indidriver bcm2835)
+target_link_libraries(indi_rpifocus indidriver wiringPi)
 install(TARGETS indi_rpifocus RUNTIME DESTINATION bin )
 install(FILES indi_rpifocus.xml DESTINATION ${INDI_DATA_DIR})
 
