@@ -15,15 +15,10 @@
  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
-//#define TINKER 1
 #include <stdio.h>
 #include <unistd.h>
 #include <memory>
-#ifdef TINKER 
-#include <wiringPi.h>
-#elif
 #include <bcm2835.h>
-#endif
 #include <string.h>
 
 #include "rpi_focus.h"
@@ -38,43 +33,26 @@ std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 
 #define MAX_STEPS 10000 // maximum steps focuser can travel from min=0 to max
 
-#define STEP_DELAY 2 // miliseconds
-#define SPEED 4
-
-#ifdef TINKER
-#define bcm2835_gpio_write digitalWrite
-#define bcm2835_delay delay
-#define bcm2835_gpio_lev digitalRead
-#define bcm2835_gpio_fsel pinMode
-#define BCM2835_GPIO_FSEL_OUTP OUTPUT
-#define BCM2835_GPIO_FSEL_INPT INPUT
-#define BCM2835_GPIO_PUD_OFF   PUD_OFF
-#endif
+#define STEP_DELAY 4 // miliseconds
 
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
 
 //RPi B+
-#ifdef TINKER
-#define DIR 7
-#define STEP 11
-#define M0 15
-#define M1 13
-#define SLEEP 16
-#elif
+/*
 #define DIR RPI_V2_GPIO_P1_07	// GPIO4
 #define STEP RPI_V2_GPIO_P1_11	// GPIO17
 #define M0 RPI_V2_GPIO_P1_15	// GPIO22
 #define M1 RPI_V2_GPIO_P1_13	// GPIO27
 #define SLEEP RPI_V2_GPIO_P1_16	// GPIO23
-#endif
-/*
+*/
+
 //RPi 2
 #define DIR RPI_BPLUS_GPIO_J8_07	// GPIO4
 #define STEP RPI_BPLUS_GPIO_J8_11	// GPIO17
 #define M0 RPI_BPLUS_GPIO_J8_15		// GPIO22
 #define M1 RPI_BPLUS_GPIO_J8_13		// GPIO27
 #define SLEEP RPI_BPLUS_GPIO_J8_16	// GPIO23
-*/
+
 
 void ISPoll(void *p);
 
@@ -152,19 +130,6 @@ const char * FocusRpi::getDefaultName()
 
 bool FocusRpi::Connect()
 {
-#ifdef TINKER
-    int ret=!wiringPiSetupPhys();
-	if (!ret)
-	{
-		IDMessage(getDeviceName(), "Problem initiating Astroberry Focuser.");
-		return false;
-	}
-    pinMode(DIR, OUTPUT);
-    pinMode(STEP, OUTPUT);
-    pinMode(SLEEP, OUTPUT);
-    pinMode(M0, OUTPUT);
-    pinMode(M1, OUTPUT);
-#elif
     if (!bcm2835_init())
     {
 		IDMessage(getDeviceName(), "Problem initiating Astroberry Focuser.");
@@ -180,15 +145,13 @@ bool FocusRpi::Connect()
     exportgpio << M1 << std::endl;
     exportgpio << SLEEP << std::endl;
     exportgpio.close();
-#endif
+
     // Set gpios to output mode
     bcm2835_gpio_fsel(DIR, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(STEP, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(SLEEP, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-
-
 	
     IDMessage(getDeviceName(), "Astroberry Focuser connected successfully.");
     return true;
@@ -202,7 +165,7 @@ bool FocusRpi::Disconnect()
 		IDMessage(getDeviceName(), "Astroberry Focuser is parking...");	
 		MoveAbsFocuser(FocusAbsPosN[0].min);
 	}
-#ifndef TINKER
+	
     // close GPIOs
     std::ofstream unexportgpio;
     unexportgpio.open("/sys/class/gpio/unexport");
@@ -213,8 +176,7 @@ bool FocusRpi::Disconnect()
     unexportgpio << SLEEP << std::endl;
     unexportgpio.close();
     bcm2835_close();
-#endif
-
+		
 	IDMessage(getDeviceName(), "Astroberry Focuser disconnected successfully.");
     
     return true;
@@ -247,7 +209,7 @@ bool FocusRpi::initProperties()
 	IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
 	IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
 
-  return true;
+    return true;
 }
 
 void FocusRpi::ISGetProperties (const char *dev)
@@ -358,6 +320,7 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 	// first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
     {
+/*		
         // handle focus motion in and out
         if (!strcmp(name, FocusMotionSP.name))
         {
@@ -378,6 +341,7 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
             IDSetSwitch(&FocusMotionSP, NULL);
             return true;
         }
+*/
         // handle focus presets
         if (!strcmp(name, PresetGotoSP.name))
         {
@@ -493,7 +457,7 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     bcm2835_gpio_write(SLEEP, HIGH);
 
 	// set full step size
-	SetSpeed(SPEED);
+	SetSpeed(1);
 	
 	// check last motion direction for backlash triggering
 	char lastdir = bcm2835_gpio_lev(DIR);

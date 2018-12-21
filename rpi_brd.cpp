@@ -15,14 +15,10 @@
  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
-//#define TINKER 1
+
 #include <stdio.h>
 #include <memory>
-#ifdef TINKER 
-#include <wiringPi.h>
-#elif
 #include <bcm2835.h>
-#endif
 #include <string.h>
 
 #include "rpi_brd.h"
@@ -30,28 +26,11 @@
 // We declare an auto pointer to IndiRpibrd
 std::unique_ptr<IndiRpibrd> indiRpibrd(new IndiRpibrd());
 
-#ifdef TINKER
-#define bcm2835_gpio_write digitalWrite
-#define bcm2835_delay delay
-#define bcm2835_gpio_lev digitalRead
-#define bcm2835_gpio_fsel pinMode
-#define BCM2835_GPIO_FSEL_OUTP OUTPUT
-#define BCM2835_GPIO_FSEL_INPT INPUT
-#define BCM2835_GPIO_PUD_OFF   PUD_OFF
-#endif
-
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
-#ifdef TINKER
-#define IN1 29
-#define IN2 31
-#define IN3 33
-#define IN4 37
-#elif
 #define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5
 #define IN2 RPI_BPLUS_GPIO_J8_31	// GPIO06
 #define IN3 RPI_BPLUS_GPIO_J8_33	// GPIO13
 #define IN4 RPI_BPLUS_GPIO_J8_37	// GPIO26
-#endif
 
 void ISPoll(void *p);
 void ISInit()
@@ -104,14 +83,7 @@ void ISSnoopDevice (XMLEle *root)
 IndiRpibrd::IndiRpibrd()
 {
 	setVersion(2,1);
-#ifdef TINKER
-    int ret=!wiringPiSetupPhys();
-	if (!ret)
-	{
-		IDLog("Problem initiating Astroberry Board.");
-		return;
-	}
-#elif
+
     if (!bcm2835_init())
     {
 		IDLog("Problem initiating Astroberry Board.");
@@ -126,7 +98,6 @@ IndiRpibrd::IndiRpibrd()
     exportgpio << IN3 << std::endl;
     exportgpio << IN4 << std::endl;
     exportgpio.close();
-#endif
 
     // Set gpios to output mode
     bcm2835_gpio_fsel(IN1, BCM2835_GPIO_FSEL_OUTP);
