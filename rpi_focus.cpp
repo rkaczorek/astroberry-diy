@@ -1,4 +1,3 @@
-
 /*******************************************************************************
   Copyright(c) 2014 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
@@ -19,8 +18,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <memory>
-#include <wiringPi.h>
+#include <bcm2835.h>
 #include <string.h>
+
 #include "rpi_focus.h"
 
 // We declare an auto pointer to focusRpi.
@@ -37,14 +37,22 @@ std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
 
-//RPi 3B
+//RPi B+
+/*
+#define DIR RPI_V2_GPIO_P1_07	// GPIO4
+#define STEP RPI_V2_GPIO_P1_11	// GPIO17
+#define M0 RPI_V2_GPIO_P1_15	// GPIO22
+#define M1 RPI_V2_GPIO_P1_13	// GPIO27
+#define SLEEP RPI_V2_GPIO_P1_16	// GPIO23
+*/
 
-#define DIR 29
-#define STEP 31
-#define SLEEP 33
-#define M1 37
-#define M2 35
-#define M3 38
+//RPi 2
+#define DIR RPI_BPLUS_GPIO_J8_07	// GPIO4
+#define STEP RPI_BPLUS_GPIO_J8_11	// GPIO17
+#define M0 RPI_BPLUS_GPIO_J8_15		// GPIO22
+#define M1 RPI_BPLUS_GPIO_J8_13		// GPIO27
+#define SLEEP RPI_BPLUS_GPIO_J8_16	// GPIO23
+
 
 void ISPoll(void *p);
 
@@ -122,22 +130,29 @@ const char * FocusRpi::getDefaultName()
 
 bool FocusRpi::Connect()
 {
-    wiringPiSetupPhys();
-    int ret=!wiringPiSetupPhys();
-    if (!ret)
+    if (!bcm2835_init())
     {
 		IDMessage(getDeviceName(), "Problem initiating Astroberry Focuser.");
 		return false;
 	}
 
     // init GPIOs
-    
-    pinMode(DIR, OUTPUT);
-    pinMode(STEP, OUTPUT);
-    pinMode(SLEEP, OUTPUT);
-    pinMode(M1, OUTPUT);
-    pinMode(M2, OUTPUT);
-    pinMode(M3, OUTPUT);
+    std::ofstream exportgpio;
+    exportgpio.open("/sys/class/gpio/export");
+    exportgpio << DIR << std::endl;
+    exportgpio << STEP << std::endl;
+    exportgpio << M0 << std::endl;
+    exportgpio << M1 << std::endl;
+    exportgpio << SLEEP << std::endl;
+    exportgpio.close();
+
+    // Set gpios to output mode
+    bcm2835_gpio_fsel(DIR, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(STEP, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SLEEP, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+	
     IDMessage(getDeviceName(), "Astroberry Focuser connected successfully.");
     return true;
 }
@@ -147,12 +162,24 @@ bool FocusRpi::Disconnect()
 	// park focuser
 	if ( FocusParkingS[0].s == ISS_ON )
 	{
-		IDMessage(getDeviceName(), "Astroberry Focuser is parking...");
+		IDMessage(getDeviceName(), "Astroberry Focuser is parking...");	
 		MoveAbsFocuser(FocusAbsPosN[0].min);
 	}
-    
+	
+    // close GPIOs
+    std::ofstream unexportgpio;
+    unexportgpio.open("/sys/class/gpio/unexport");
+    unexportgpio << DIR << std::endl;
+    unexportgpio << STEP << std::endl;
+    unexportgpio << M0 << std::endl;
+    unexportgpio << M1 << std::endl;
+    unexportgpio << SLEEP << std::endl;
+    unexportgpio.close();
+    bcm2835_close();
+		
 	IDMessage(getDeviceName(), "Astroberry Focuser disconnected successfully.");
-        return true;
+    
+    return true;
 }
 
 bool FocusRpi::initProperties()
@@ -181,8 +208,8 @@ bool FocusRpi::initProperties()
 	IUFillSwitch(&FocusParkingS[0],"FOCUS_PARKON","Enable",ISS_OFF);
 	IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
 	IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
-  
-  return true;
+
+    return true;
 }
 
 void FocusRpi::ISGetProperties (const char *dev)
@@ -427,43 +454,45 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
 	IDSetNumber(&FocusAbsPosNP, NULL);
 
     // motor wake up
-        digitalWrite(SLEEP, HIGH);
-	// set 1/8 step size
-	SetSpeed(2);
+    bcm2835_gpio_write(SLEEP, HIGH);
 
+	// set full step size
+	SetSpeed(1);
+	
 	// check last motion direction for backlash triggering
-        char lastdir = digitalRead(DIR);
+	char lastdir = bcm2835_gpio_lev(DIR);
+
     // set direction
     const char* direction;    
     if (targetTicks > FocusAbsPosN[0].value)
     {
 		// OUTWARD
-		digitalWrite(DIR, LOW);
-                direction = " outward ";
+		bcm2835_gpio_write(DIR, LOW);
+		direction = " outward ";
 	}
     else
 	{
 		// INWARD
-		digitalWrite(DIR, HIGH);
+		bcm2835_gpio_write(DIR, HIGH);
 		direction = " inward ";
 	}
 
     IDMessage(getDeviceName() , "Astroberry Focuser is moving %s", direction);
 
 	// if direction changed do backlash adjustment
-	if ( digitalRead(DIR) != lastdir && FocusAbsPosN[0].value != 0 && FocusBacklashN[0].value != 0 )
+	if ( bcm2835_gpio_lev(DIR) != lastdir && FocusAbsPosN[0].value != 0 && FocusBacklashN[0].value != 0 )
 	{
 		IDMessage(getDeviceName() , "Astroberry Focuser backlash compensation by %0.0f steps...", FocusBacklashN[0].value);	
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
-			digitalWrite(STEP, HIGH);
+			bcm2835_gpio_write(STEP, HIGH);
 			// wait
-			delay (STEP_DELAY/8);
+			bcm2835_delay(STEP_DELAY/2);
 			// step off
-			digitalWrite(STEP, LOW); 
+			bcm2835_gpio_write(STEP, LOW);
 			// wait 
-			delay (STEP_DELAY/8);
+			bcm2835_delay(STEP_DELAY/2);
 		}
 	}
 
@@ -473,27 +502,27 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     for ( int i = 0; i < ticks; i++ )
     {
         // step on
-	digitalWrite(STEP, HIGH);
+        bcm2835_gpio_write(STEP, HIGH);
         // wait
-	delay(STEP_DELAY/2);
+        bcm2835_delay(STEP_DELAY/2);
         // step off
-	digitalWrite(STEP, LOW);
+        bcm2835_gpio_write(STEP, LOW);
         // wait 
-	delay(STEP_DELAY/2);
+        bcm2835_delay(STEP_DELAY/2);
 
 		// INWARD - count down
-		if  ( digitalRead(DIR) == HIGH )
+		if ( bcm2835_gpio_lev(DIR) == HIGH )
 			FocusAbsPosN[0].value -= 1;
 
 		// OUTWARD - count up
-		if ( digitalRead(DIR) == LOW )
+		if ( bcm2835_gpio_lev(DIR) == LOW )
 			FocusAbsPosN[0].value += 1;
 
 		IDSetNumber(&FocusAbsPosNP, NULL);
     }
 
     // motor sleep
-    digitalWrite(SLEEP, LOW);
+    bcm2835_gpio_write(SLEEP, LOW);
 
     // update abspos value and status
     IDSetNumber(&FocusAbsPosNP, "Astroberry Focuser moved to position %0.0f", FocusAbsPosN[0].value);
@@ -503,51 +532,61 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     return IPS_OK;
 }
 
-
- bool FocusRpi::SetSpeed(int speed)
-
+bool FocusRpi::SetSpeed(int speed)
 {
-	/* Stepper motor resolution settings (for A4988 POLOLU)
-	* 1) 1/1   - M1=0 M2=0 M3=0
-	* 2) 1/2   - M1=1 M2=0 M3=0
-	* 3) 1/4   - M1=0 M2=1 M3=0
-	* 4) 1/8   - M1=1 M2=1 M3=0
-	* 5) 1/16  - M1=1 M2=1 M3=1 
+	/* Stepper motor resolution settings (for PG2528-0502U)
+	* 1) 1/1   - M0=0 M1=0
+	* 2) 1/2   - M0=1 M1=0
+	* 3) 1/4   - M0=floating M1=0
+	* 4) 1/8   - M0=0 M1=1
+	* 5) 1/16  - M0=1 M1=1
+	* 6) 1/32  - M0=floating M1=1
 	*/
 
     switch(speed)
     {
     case 1:	// 1:1
-        digitalWrite(M1, LOW);
-	digitalWrite(M2, LOW);
-	digitalWrite(M3, LOW);
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+        bcm2835_gpio_write(M0, LOW);
+		bcm2835_gpio_write(M1, LOW);
         break;
     case 2:	// 1:2
-	digitalWrite(M1, HIGH);
-        digitalWrite(M2, LOW);
-	digitalWrite(M3, LOW);
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_write(M0, HIGH);
+        bcm2835_gpio_write(M1, LOW);
         break;
     case 3:	// 1:4
-        digitalWrite(M1, LOW);
-        digitalWrite(M2, HIGH);
-	digitalWrite(M3, LOW);
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+        bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
+        bcm2835_gpio_write(M1, LOW);
         break;
     case 4:	// 1:8
-        digitalWrite(M1, HIGH);
-        digitalWrite(M2, HIGH);
-        digitalWrite(M3, LOW);
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+        bcm2835_gpio_write(M0, LOW);
+        bcm2835_gpio_write(M1, HIGH);
         break;
-    case 5:	// 1:16 
-        digitalWrite(M1, HIGH);
-        digitalWrite(M2, HIGH);
-        digitalWrite(M3, HIGH);
+    case 5:	// 1:16
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+        bcm2835_gpio_write(M0, HIGH);
+        bcm2835_gpio_write(M1, HIGH);
         break;
-    default:	// 1:8 
-        digitalWrite(M1, HIGH);
-        digitalWrite(M2, HIGH);
-        digitalWrite(M3, LOW);
+    case 6:	// 1:32
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
+        bcm2835_gpio_write(M1, HIGH);
+        break;
+    default:	// 1:1
+        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+        bcm2835_gpio_write(M0, LOW);
+        bcm2835_gpio_write(M1, LOW);
         break;
     }
 	return true;
 }
-
