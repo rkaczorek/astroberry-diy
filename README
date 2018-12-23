@@ -1,6 +1,3 @@
-Compared to Masterbranch: Some updates as regards the board and the focuser.
-Please note that I also changed the GPIO assignments.
-
 INDI Astroberry 1.0.5
 =================================
 This package provides the INDI drivers for Raspberry Pi devices:
@@ -43,8 +40,7 @@ Requirements
 ============
 * INDI available here http://indilib.org/download.html
 * RTIMULib (for Astroberry AltIMU) available here https://github.com/RPi-Distro/RTIMULib
-* no more valid: bcm2835 (for Astroberry Focuser and Astroberry Board) available here http://www.airspayce.com/mikem/bcm2835/
-* instead: for downloading wiringPi library: please refer to: http://wiringpi.com/download-and-install/
+* bcm2835 (for Astroberry Focuser and Astroberry Board) available here http://www.airspayce.com/mikem/bcm2835/
 
 Installation
 ============
@@ -73,10 +69,10 @@ All devices have been connected to Raspberry Pi 2 running Raspbian Jenny or Ubun
 
 1. Astroberry Board
 * Power switch board - YwRobot 4 relay connected to Raspberry Pi (40 GPIO pins available)
-  GPIO23 - IN1
-  GPIO24 - IN2
-  GPIO12 - IN3
-  GPIO16 - IN4
+  GPIO05 - IN1
+  GPIO06 - IN2
+  GPIO13 - IN3
+  GPIO26 - IN4
   Four IN pins, each switching ON/OFF a power line:
   * IN1 - 5V to any usb powered device (connecting to Raspberry Pi enables hard reset)
   * IN2 - 5V to any usb powered device
@@ -86,16 +82,15 @@ All devices have been connected to Raspberry Pi 2 running Raspbian Jenny or Ubun
 
 2. Astroberry Focuser
 * Stepper motor - PG2528-0502U 5V 0.2A 0,5Nm (with builtin gear 76:1)
-* Stepper motor controller - initially: Low-Voltage DRV8834 10,8V 2A. now: A4988 Pololu for 12V
+* Stepper motor controller - Low-Voltage DRV8834 10,8V 2A.
   Wiring Raspberry Pi to the motor controller:
-  GPIO05 - DIR
-  GPIO06 - STEP
-  GPIO19 - M1
-  GPIO26 - M2
-  GPIO20 - M3
-  GPIO13 - SLEEP
+  GPIO04 - DIR
+  GPIO17 - STEP
+  GPIO22 - M0
+  GPIO27 - M1
+  GPIO23 - SLEEP
   Note: Make sure you connect the stepper motor correctly to the controller (B2, B1 and A2, A1 pins on the controller).
-        Remember to protect the 12 power line connected to VMOT pin on the motor controller with 100uF capacitor.
+        Remember to protect the 5V power line connected to VMOT pin on the motor controller with 100uF capacitor.
 
 3. Astroberry AltIMU
 * AltIMU-10 v4 Gyro, Accelerometer, Compass, and Altimeter (L3GD20H, LSM303D, and LPS25H Carrier)
