@@ -62,36 +62,35 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
 
 # Changelog
 
-* v1.1.0
-indi_rpigps     -	removed because already stable version is distributed with core INDI library
-indi_rpialtimu  -   removed because separate project is maintained for this driver (https://github.com/rkaczorek/astroberry-altimu)
-indi_rpifocus	-	stepper resolution, speed control and configurable max absolute position added
+v1.1.0
+* indi_rpigps -	removed because already stable version is distributed with core INDI library
+* indi_rpialtimu  - removed because separate project is maintained for this driver (https://github.com/rkaczorek/astroberry-altimu)
+* indi_rpifocus -	stepper resolution, speed control and configurable max absolute position added
 
-* v1.0.5
-all		-	Sync to latest libindi changes. Focuser controller mapping removed
-other		-	Adding bcm2835-1.52 lib and setting statical linking
+v1.0.5
+* all -	Sync to latest libindi changes. Focuser controller mapping removed
+* other -	Adding bcm2835-1.52 lib and setting statical linking
 
-* v1.0.4
-indi_rpifocus	-	Sync to latest libindi changes. Focuser controller mapping added
-other		-	FindINDI/cmake updated to the latest version
+v1.0.4
+* indi_rpifocus	-	Sync to latest libindi changes. Focuser controller mapping added
+* other -	FindINDI/cmake updated to the latest version
 
-* v1.0.3
-indi_rpigps	-	Sync to latest INDI::GPS changes
-indi_rpibrd	-	Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
-indi_rpifocus	-	Code improvements
+v1.0.3
+* indi_rpigps	-	Sync to latest INDI::GPS changes
+* indi_rpibrd	-	Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
+* indi_rpifocus	-	Code improvements
 
-* v1.0.2
-indi_rpigps     -       Rewrite fo the driver to sync with libindi changes (GPS::INDI)
-indi_rpigs	-	Adding Polaris Hour Angle for easy polar alignment
-indi_rpibrd	-	Shutdown button added for secure system power off
+v1.0.2
+* indi_rpigps - Rewrite fo the driver to sync with libindi changes (GPS::INDI)
+* indi_rpigs  - Adding Polaris Hour Angle for easy polar alignment
+* indi_rpibrd - Shutdown button added for secure system power off
 
-* v1.0.1
-indi_rpigps     -       FIX for gps reading freeze and full integration with gpsd service (required)
-indi_rpifocus   -       FIX for lack of focuser status handling e.g. taking images during move
-indi_rpifocus   -       FIX for inconsistences in focus direction
-indi_rpifocus   -       disabling dualspeed mode. single speed mode only used (native)
-indi_rpialtimu  -       change of values format from 0.3f to 0.1f
+v1.0.1
+* indi_rpigps - FIX for gps reading freeze and full integration with gpsd service (required)
+* indi_rpifocus - FIX for lack of focuser status handling e.g. taking images during move
+* indi_rpifocus - FIX for inconsistences in focus direction
+* indi_rpifocus - disabling dualspeed mode. single speed mode only used (native)
+* indi_rpialtimu  - change of values format from 0.3f to 0.1f
 
-* v1.0
-all		- Initial release of astroberry drivers
-
+v1.0.0
+* all - Initial release of astroberry drivers
