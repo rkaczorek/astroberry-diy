@@ -26,27 +26,7 @@
 // We declare an auto pointer to focusRpi.
 std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 
-// Stepper motor takes 4 miliseconds to move one step = 250 steps per second (real rate = 240,905660377)
-// 1) focusing from min to max takes 7 evolutions
-// 2) PG2528-0502U step motor makes 7 * (360deg/15degperstep)*72:1 = 1728 steps per evolution
-// 3) MAX_STEPS for 7 evolutions should be 12096
-
-#define MAX_STEPS 10000 // maximum steps focuser can travel from min=0 to max
-
-#define STEP_DELAY 4 // miliseconds
-
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
-
-//RPi B+
-/*
-#define DIR RPI_V2_GPIO_P1_07	// GPIO4
-#define STEP RPI_V2_GPIO_P1_11	// GPIO17
-#define M0 RPI_V2_GPIO_P1_15	// GPIO22
-#define M1 RPI_V2_GPIO_P1_13	// GPIO27
-#define SLEEP RPI_V2_GPIO_P1_16	// GPIO23
-*/
-
-//RPi 2
 #define DIR RPI_BPLUS_GPIO_J8_07	// GPIO4
 #define STEP RPI_BPLUS_GPIO_J8_11	// GPIO17
 #define M0 RPI_BPLUS_GPIO_J8_15		// GPIO22
@@ -114,8 +94,9 @@ void ISSnoopDevice (XMLEle *root)
 
 FocusRpi::FocusRpi()
 {
-	setVersion(2,1);
+	setVersion(2,2);
 	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE);
+	Focuser::setSupportedConnections(CONNECTION_NONE);
 }
 
 FocusRpi::~FocusRpi()
@@ -186,20 +167,7 @@ bool FocusRpi::initProperties()
 {
     INDI::Focuser::initProperties();
 
-    IUFillNumber(&FocusAbsPosN[0],"FOCUS_ABSOLUTE_POSITION","Ticks","%0.0f",0,MAX_STEPS,(int)MAX_STEPS/100,0);
-    IUFillNumberVector(&FocusAbsPosNP,FocusAbsPosN,1,getDeviceName(),"ABS_FOCUS_POSITION","Position",MAIN_CONTROL_TAB,IP_RW,0,IPS_OK);
-
-	IUFillNumber(&PresetN[0], "Preset 1", "", "%0.0f", 0, MAX_STEPS, (int)(MAX_STEPS/100), 0);
-	IUFillNumber(&PresetN[1], "Preset 2", "", "%0.0f", 0, MAX_STEPS, (int)(MAX_STEPS/100), 0);
-	IUFillNumber(&PresetN[2], "Preset 3", "", "%0.0f", 0, MAX_STEPS, (int)(MAX_STEPS/100), 0);
-	IUFillNumberVector(&PresetNP, PresetN, 3, getDeviceName(), "Presets", "Presets", "Presets", IP_RW, 0, IPS_IDLE);
-
-	IUFillSwitch(&PresetGotoS[0], "Preset 1", "Preset 1", ISS_OFF);
-	IUFillSwitch(&PresetGotoS[1], "Preset 2", "Preset 2", ISS_OFF);
-	IUFillSwitch(&PresetGotoS[2], "Preset 3", "Preset 3", ISS_OFF);
-	IUFillSwitchVector(&PresetGotoSP, PresetGotoS, 3, getDeviceName(), "Presets Goto", "Goto", MAIN_CONTROL_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
-
-	IUFillNumber(&FocusBacklashN[0], "FOCUS_BACKLASH_VALUE", "Steps", "%0.0f", 0, (int)(MAX_STEPS/100), (int)(MAX_STEPS/1000), 0);
+	IUFillNumber(&FocusBacklashN[0], "FOCUS_BACKLASH_VALUE", "Steps", "%0.0f", 0, 1000, 10, 0);
 	IUFillNumberVector(&FocusBacklashNP, FocusBacklashN, 1, getDeviceName(), "FOCUS_BACKLASH", "Backlash", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
 	IUFillSwitch(&FocusResetS[0],"FOCUS_RESET","Reset",ISS_OFF);
@@ -209,6 +177,14 @@ bool FocusRpi::initProperties()
 	IUFillSwitch(&FocusParkingS[1],"FOCUS_PARKOFF","Disable",ISS_OFF);
 	IUFillSwitchVector(&FocusParkingSP,FocusParkingS,2,getDeviceName(),"FOCUS_PARK","Parking Mode",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_OK);
 
+	IUFillNumber(&FocusResolutionN[0], "FOCUS_RESOLUTION_VALUE", "Resolution", "%0.0f", 1, 6, 1, 1);
+	IUFillNumberVector(&FocusResolutionNP, FocusResolutionN, 1, getDeviceName(), "FOCUS_RESOLUTION", "Focuser Resolution", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+	IUFillNumber(&FocusSpeedN[0], "FOCUS_SPEED_VALUE", "ms per step", "%0.0f", 1, 10, 1, 1);
+	IUFillNumberVector(&FocusSpeedNP, FocusSpeedN, 1, getDeviceName(), "FOCUS_SPEED", "Focuser Speed", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+	FocusAbsPosN[0].max = FocusMaxPosN[0].value;
+
     return true;
 }
 
@@ -217,7 +193,7 @@ void FocusRpi::ISGetProperties (const char *dev)
     INDI::Focuser::ISGetProperties(dev);
 
     /* Add debug controls so we may debug driver if necessary */
-    addDebugControl();
+    addAuxControls();
 
     return;
 }
@@ -229,20 +205,19 @@ bool FocusRpi::updateProperties()
 
     if (isConnected())
     {
-		deleteProperty(FocusSpeedNP.name);
-        defineNumber(&FocusAbsPosNP);
-        defineSwitch(&FocusMotionSP);
-		defineNumber(&FocusBacklashNP);
+		defineSwitch(&FocusMotionSP);
 		defineSwitch(&FocusParkingSP);
 		defineSwitch(&FocusResetSP);
-    }
-    else
-    {
-        deleteProperty(FocusAbsPosNP.name);
-        deleteProperty(FocusMotionSP.name);
-		deleteProperty(FocusBacklashNP.name);
+		defineNumber(&FocusBacklashNP);
+		defineNumber(&FocusResolutionNP);
+		defineNumber(&FocusSpeedNP);
+    } else {
+		deleteProperty(FocusMotionSP.name);
 		deleteProperty(FocusParkingSP.name);
 		deleteProperty(FocusResetSP.name);
+		deleteProperty(FocusBacklashNP.name);
+		deleteProperty(FocusResolutionNP.name);
+		deleteProperty(FocusSpeedNP.name);
     }
 
     return true;
@@ -265,19 +240,19 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
                IDSetNumber(&FocusAbsPosNP, NULL);
             }
             return true;
-        }        
+        }
 
         // handle focus relative position
         if (!strcmp(name, FocusRelPosNP.name))
         {
 			IUUpdateNumber(&FocusRelPosNP,values,names,n);
-			
+
 			//FOCUS_INWARD
-            if ( FocusMotionS[0].s == ISS_ON )
+			if ( FocusMotionS[0].s == ISS_ON )
 				MoveRelFocuser(FOCUS_INWARD, FocusRelPosN[0].value);
 
 			//FOCUS_OUTWARD
-            if ( FocusMotionS[1].s == ISS_ON )
+			if ( FocusMotionS[1].s == ISS_ON )
 				MoveRelFocuser(FOCUS_OUTWARD, FocusRelPosN[0].value);
 
 			FocusRelPosNP.s=IPS_OK;
@@ -291,11 +266,11 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
 			IUUpdateNumber(&FocusTimerNP,values,names,n);
 
 			//FOCUS_INWARD
-            if ( FocusMotionS[0].s == ISS_ON )
+			if ( FocusMotionS[0].s == ISS_ON )
 				MoveFocuser(FOCUS_INWARD, 0, FocusTimerN[0].value);
 
 			//FOCUS_OUTWARD
-            if ( FocusMotionS[1].s == ISS_ON )
+			if ( FocusMotionS[1].s == ISS_ON )
 				MoveFocuser(FOCUS_OUTWARD, 0, FocusTimerN[0].value);
 
 			FocusTimerNP.s=IPS_OK;
@@ -311,6 +286,24 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
             IDSetNumber(&FocusBacklashNP, "Astroberry Focuser backlash set to %d", (int) FocusBacklashN[0].value);
             return true;
         }
+
+        // handle focus resolution
+        if (!strcmp(name, FocusResolutionNP.name))
+        {
+		   IUUpdateNumber(&FocusResolutionNP,values,names,n);
+		   FocusResolutionNP.s=IPS_OK;
+		   IDSetNumber(&FocusResolutionNP, NULL);
+           return true;
+        }
+
+        // handle focus speed
+        if (!strcmp(name, FocusSpeedNP.name))
+        {
+		   IUUpdateNumber(&FocusSpeedNP,values,names,n);
+		   FocusSpeedNP.s=IPS_OK;
+		   IDSetNumber(&FocusSpeedNP, NULL);
+           return true;
+        }
 	}
     return INDI::Focuser::ISNewNumber(dev,name,values,names,n);
 }
@@ -320,53 +313,33 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 	// first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
     {
-/*		
-        // handle focus motion in and out
-        if (!strcmp(name, FocusMotionSP.name))
-        {
-            IUUpdateSwitch(&FocusMotionSP, states, names, n);
-
-			//FOCUS_INWARD
-            if ( FocusMotionS[0].s == ISS_ON )
-				MoveRelFocuser(FOCUS_INWARD, FocusRelPosN[0].value);
-
-			//FOCUS_OUTWARD
-            if ( FocusMotionS[1].s == ISS_ON )
-				MoveRelFocuser(FOCUS_OUTWARD, FocusRelPosN[0].value);
-
-            //FocusMotionS[0].s = ISS_OFF;
-            //FocusMotionS[1].s = ISS_OFF;
-
-			FocusMotionSP.s = IPS_OK;
-            IDSetSwitch(&FocusMotionSP, NULL);
-            return true;
-        }
-*/
         // handle focus presets
         if (!strcmp(name, PresetGotoSP.name))
         {
             IUUpdateSwitch(&PresetGotoSP, states, names, n);
 
 			//Preset 1
-            if ( PresetGotoS[0].s == ISS_ON )
+			if ( PresetGotoS[0].s == ISS_ON )
 				MoveAbsFocuser(PresetN[0].value);
 
 			//Preset 2
-            if ( PresetGotoS[1].s == ISS_ON )
+			if ( PresetGotoS[1].s == ISS_ON )
 				MoveAbsFocuser(PresetN[1].value);
 
 			//Preset 2
-            if ( PresetGotoS[2].s == ISS_ON )
+			if ( PresetGotoS[2].s == ISS_ON )
 				MoveAbsFocuser(PresetN[2].value);
 
 			PresetGotoS[0].s = ISS_OFF;
 			PresetGotoS[1].s = ISS_OFF;
 			PresetGotoS[2].s = ISS_OFF;
 			PresetGotoSP.s = IPS_OK;
+
             IDSetSwitch(&PresetGotoSP, NULL);
+            
             return true;
         }
-                
+
         // handle focus reset
         if(!strcmp(name, FocusResetSP.name))
         {
@@ -374,10 +347,11 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 
             if ( FocusResetS[0].s == ISS_ON && FocusAbsPosN[0].value == FocusAbsPosN[0].min  )
             {
-				FocusAbsPosN[0].value = (int)MAX_STEPS/100;
+				FocusAbsPosN[0].value = (int)FocusMaxPosN[0].value/100;
 				IDSetNumber(&FocusAbsPosNP, NULL);
 				MoveAbsFocuser(0);
 			}
+
             FocusResetS[0].s = ISS_OFF;
             IDSetSwitch(&FocusResetSP, NULL);
 			return true;
@@ -392,6 +366,7 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 		}
 
         // handle focus abort - TODO
+/*
         if (!strcmp(name, AbortSP.name))
         {
             IUUpdateSwitch(&AbortSP, states, names, n);
@@ -400,6 +375,7 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
             IDSetSwitch(&AbortSP, NULL);
             return true;
         }
+*/
     }
     return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
 }
@@ -411,10 +387,12 @@ bool FocusRpi::ISSnoopDevice (XMLEle *root)
 
 bool FocusRpi::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigNumber(fp, &FocusRelPosNP);
     IUSaveConfigNumber(fp, &PresetNP);
     IUSaveConfigNumber(fp, &FocusBacklashNP);
-	IUSaveConfigSwitch(fp, &FocusParkingSP);
+    IUSaveConfigSwitch(fp, &FocusParkingSP);
+    IUSaveConfigNumber(fp, &FocusResolutionNP);
+    IUSaveConfigNumber(fp, &FocusSpeedNP);
+    //IUSaveConfigText(fp, &JoystickSettingTP);
 
     if ( FocusParkingS[0].s == ISS_ON )
 		IUSaveConfigNumber(fp, &FocusAbsPosNP);
@@ -424,7 +402,7 @@ bool FocusRpi::saveConfigItems(FILE *fp)
 
 IPState FocusRpi::MoveFocuser(FocusDirection dir, int speed, int duration)
 {
-	int ticks = (int) ( duration / STEP_DELAY);
+    int ticks = (int) ( duration / FocusSpeedN[0].value);
     return 	MoveRelFocuser( dir, ticks);
 }
 
@@ -442,61 +420,59 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
         IDMessage(getDeviceName(), "Requested position is out of range.");
         return IPS_ALERT;
     }
-    	
+
     if (targetTicks == FocusAbsPosN[0].value)
     {
-        // IDMessage(getDeviceName(), "Astroberry Focuser already in the requested position.");
+        IDMessage(getDeviceName(), "Astroberry Focuser already in the requested position.");
         return IPS_OK;
     }
 
-	// set focuser busy
-	FocusAbsPosNP.s = IPS_BUSY;
-	IDSetNumber(&FocusAbsPosNP, NULL);
+    // set focuser busy
+    FocusAbsPosNP.s = IPS_BUSY;
+    IDSetNumber(&FocusAbsPosNP, NULL);
 
     // motor wake up
     bcm2835_gpio_write(SLEEP, HIGH);
 
-	// set full step size
-	SetSpeed(1);
-	
-	// check last motion direction for backlash triggering
-	char lastdir = bcm2835_gpio_lev(DIR);
+    // set full step size
+    SetResolution(FocusResolutionN[0].value);
+
+    // check last motion direction for backlash triggering
+    char lastdir = bcm2835_gpio_lev(DIR);
 
     // set direction
-    const char* direction;    
+    const char* direction;
     if (targetTicks > FocusAbsPosN[0].value)
     {
 		// OUTWARD
 		bcm2835_gpio_write(DIR, LOW);
 		direction = " outward ";
-	}
-    else
-	{
+    } else {
 		// INWARD
 		bcm2835_gpio_write(DIR, HIGH);
 		direction = " inward ";
-	}
+    }
 
     IDMessage(getDeviceName() , "Astroberry Focuser is moving %s", direction);
 
-	// if direction changed do backlash adjustment
-	if ( bcm2835_gpio_lev(DIR) != lastdir && FocusAbsPosN[0].value != 0 && FocusBacklashN[0].value != 0 )
-	{
-		IDMessage(getDeviceName() , "Astroberry Focuser backlash compensation by %0.0f steps...", FocusBacklashN[0].value);	
+    // if direction changed do backlash adjustment
+    if ( bcm2835_gpio_lev(DIR) != lastdir && FocusAbsPosN[0].value != 0 && FocusBacklashN[0].value != 0 )
+    {
+		IDMessage(getDeviceName() , "Astroberry Focuser backlash compensation by %0.0f steps...", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
 			bcm2835_gpio_write(STEP, HIGH);
 			// wait
-			bcm2835_delay(STEP_DELAY/2);
+			bcm2835_delay(FocusSpeedN[0].value);
 			// step off
 			bcm2835_gpio_write(STEP, LOW);
-			// wait 
-			bcm2835_delay(STEP_DELAY/2);
+			// wait
+			bcm2835_delay(FocusSpeedN[0].value);
 		}
-	}
+    }
 
-	// process targetTicks
+    // process targetTicks
     int ticks = abs(targetTicks - FocusAbsPosN[0].value);
 
     for ( int i = 0; i < ticks; i++ )
@@ -504,21 +480,21 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
         // step on
         bcm2835_gpio_write(STEP, HIGH);
         // wait
-        bcm2835_delay(STEP_DELAY/2);
+        bcm2835_delay(FocusSpeedN[0].value);
         // step off
         bcm2835_gpio_write(STEP, LOW);
-        // wait 
-        bcm2835_delay(STEP_DELAY/2);
+        // wait
+        bcm2835_delay(FocusSpeedN[0].value);
 
-		// INWARD - count down
-		if ( bcm2835_gpio_lev(DIR) == HIGH )
-			FocusAbsPosN[0].value -= 1;
+	// INWARD - count down
+	if ( bcm2835_gpio_lev(DIR) == HIGH )
+	    FocusAbsPosN[0].value -= 1;
 
-		// OUTWARD - count up
-		if ( bcm2835_gpio_lev(DIR) == LOW )
-			FocusAbsPosN[0].value += 1;
+	// OUTWARD - count up
+	if ( bcm2835_gpio_lev(DIR) == LOW )
+	    FocusAbsPosN[0].value += 1;
 
-		IDSetNumber(&FocusAbsPosNP, NULL);
+	IDSetNumber(&FocusAbsPosNP, NULL);
     }
 
     // motor sleep
@@ -526,67 +502,67 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
 
     // update abspos value and status
     IDSetNumber(&FocusAbsPosNP, "Astroberry Focuser moved to position %0.0f", FocusAbsPosN[0].value);
-	FocusAbsPosNP.s = IPS_OK;
-	IDSetNumber(&FocusAbsPosNP, NULL);
-	
+    FocusAbsPosNP.s = IPS_OK;
+    IDSetNumber(&FocusAbsPosNP, NULL);
+
     return IPS_OK;
 }
 
-bool FocusRpi::SetSpeed(int speed)
+bool FocusRpi::SetResolution(int speed)
 {
-	/* Stepper motor resolution settings (for PG2528-0502U)
-	* 1) 1/1   - M0=0 M1=0
-	* 2) 1/2   - M0=1 M1=0
-	* 3) 1/4   - M0=floating M1=0
-	* 4) 1/8   - M0=0 M1=1
-	* 5) 1/16  - M0=1 M1=1
-	* 6) 1/32  - M0=floating M1=1
-	*/
+    /* Stepper motor resolution settings (for DRV8834)
+    * 1) 1/1   - M0=0 M1=0
+    * 2) 1/2   - M0=1 M1=0
+    * 3) 1/4   - M0=floating M1=0
+    * 4) 1/8   - M0=0 M1=1
+    * 5) 1/16  - M0=1 M1=1
+    * 6) 1/32  - M0=floating M1=1
+    */
 
     switch(speed)
     {
-    case 1:	// 1:1
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(M0, LOW);
-		bcm2835_gpio_write(M1, LOW);
-        break;
-    case 2:	// 1:2
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_write(M0, HIGH);
-        bcm2835_gpio_write(M1, LOW);
-        break;
-    case 3:	// 1:4
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
-        bcm2835_gpio_write(M1, LOW);
-        break;
-    case 4:	// 1:8
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(M0, LOW);
-        bcm2835_gpio_write(M1, HIGH);
-        break;
-    case 5:	// 1:16
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(M0, HIGH);
-        bcm2835_gpio_write(M1, HIGH);
-        break;
-    case 6:	// 1:32
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
-        bcm2835_gpio_write(M1, HIGH);
-        break;
-    default:	// 1:1
-        bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-        bcm2835_gpio_write(M0, LOW);
-        bcm2835_gpio_write(M1, LOW);
-        break;
+		case 1:	// 1:1
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, LOW);
+			bcm2835_gpio_write(M1, LOW);
+			break;
+		case 2:	// 1:2
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, HIGH);
+			bcm2835_gpio_write(M1, LOW);
+			break;
+		case 3:	// 1:4
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
+			bcm2835_gpio_write(M1, LOW);
+			break;
+		case 4:	// 1:8
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, LOW);
+			bcm2835_gpio_write(M1, HIGH);
+			break;
+		case 5:	// 1:16
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, HIGH);
+			bcm2835_gpio_write(M1, HIGH);
+			break;
+		case 6:	// 1:32
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_INPT);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, BCM2835_GPIO_PUD_OFF);
+			bcm2835_gpio_write(M1, HIGH);
+			break;
+		default:	// 1:1
+			bcm2835_gpio_fsel(M0, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
+			bcm2835_gpio_write(M0, LOW);
+			bcm2835_gpio_write(M1, LOW);
+			break;
     }
 	return true;
 }

@@ -32,7 +32,13 @@ class FocusRpi : public INDI::Focuser
         ISwitchVectorProperty FocusParkingSP;
  
 		INumber FocusBacklashN[1];
-		INumberVectorProperty FocusBacklashNP; 
+		INumberVectorProperty FocusBacklashNP;
+		
+		INumber FocusResolutionN[1];
+		INumberVectorProperty FocusResolutionNP;
+
+		INumber FocusSpeedN[1];
+		INumberVectorProperty FocusSpeedNP;		
     public:
         FocusRpi();
         virtual ~FocusRpi();
@@ -53,7 +59,7 @@ class FocusRpi : public INDI::Focuser
 		virtual IPState MoveFocuser(FocusDirection dir, int speed, int duration);
         virtual IPState MoveAbsFocuser(int ticks);
         virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
-        virtual bool SetSpeed(int speed);
+        virtual bool SetResolution(int speed);
 };
 
 #endif
