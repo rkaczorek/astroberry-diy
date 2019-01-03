@@ -38,7 +38,10 @@ class FocusRpi : public INDI::Focuser
 		INumberVectorProperty FocusResolutionNP;
 
 		INumber FocusSpeedN[1];
-		INumberVectorProperty FocusSpeedNP;		
+		INumberVectorProperty FocusSpeedNP;
+		
+        ISwitch MotorDirS[2];
+        ISwitchVectorProperty MotorDirSP;	
     public:
         FocusRpi();
         virtual ~FocusRpi();

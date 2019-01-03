@@ -14,20 +14,24 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
+option(WITH_WIRINGPI "Use WiringPi as a low level hardware library" OFF)
 
 find_package(INDI REQUIRED)
-
-#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src)
+include_directories(${CMAKE_SOURCE_DIR}/../gpio_lib_c/wiringPi)
 
 add_library(bcm2835 STATIC IMPORTED)
 set_property(TARGET bcm2835 PROPERTY IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52/src/libbcm2835.a)
-add_dependencies(bcm2835 libbcm2835)
+add_dependencies(bcm2835 libbcm2835 wiringPi)
+
+if(WITH_WIRINGPI)
+	add_definitions(-DWIRINGPI)
+endif()
 
 ################ libbcm2835 ################
 
@@ -48,7 +52,7 @@ set(indi_rpifocus_SRCS
    )
 
 add_executable(indi_rpifocus ${indi_rpifocus_SRCS})
-target_link_libraries(indi_rpifocus indidriver bcm2835)
+target_link_libraries(indi_rpifocus indidriver bcm2835 wiringPi crypt)
 install(TARGETS indi_rpifocus RUNTIME DESTINATION bin )
 install(FILES indi_rpifocus.xml DESTINATION ${INDI_DATA_DIR})
 
@@ -59,6 +63,6 @@ set(indi_rpibrd_SRCS
    )
 
 add_executable(indi_rpibrd ${indi_rpibrd_SRCS})
-target_link_libraries(indi_rpibrd indidriver bcm2835)
+target_link_libraries(indi_rpibrd indidriver bcm2835 wiringPi crypt)
 install(TARGETS indi_rpibrd RUNTIME DESTINATION bin )
 install(FILES indi_rpibrd.xml DESTINATION ${INDI_DATA_DIR})

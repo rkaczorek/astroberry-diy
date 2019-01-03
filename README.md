@@ -25,10 +25,11 @@ Then you can compile the drivers:
 git clone https://github.com/rkaczorek/astroberry-diy.git
 cd astroberry-diy
 mkdir build && cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+cmake -DWITH_WIRINGPI=OFF -DCMAKE_INSTALL_PREFIX=/usr ..
 make
 sudo make install
 ```
+Note: Set -DWITH_WIRINGPI=ON to use WiringPi library as a low level hardware library, instead BCM2835 
 
 # How to use it?
 Start INDI server with the drivers:
@@ -65,7 +66,7 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
 v1.1.0
 * indi_rpigps -	removed because already stable version is distributed with core INDI library
 * indi_rpialtimu  - removed because separate project is maintained for this driver (https://github.com/rkaczorek/astroberry-altimu)
-* indi_rpifocus -	stepper resolution, speed control and configurable max absolute position added
+* indi_rpifocus -	ADDED:stepper resolution, speed control, direction control, configurable max absolute position
 
 v1.0.5
 * all -	Sync to latest libindi changes. Focuser controller mapping removed
