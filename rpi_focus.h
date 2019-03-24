@@ -23,25 +23,6 @@
 
 class FocusRpi : public INDI::Focuser
 {
-    protected:
-    private:
-        ISwitch FocusResetS[1];
-        ISwitchVectorProperty FocusResetSP;
-        
-        ISwitch FocusParkingS[2];
-        ISwitchVectorProperty FocusParkingSP;
- 
-		INumber FocusBacklashN[1];
-		INumberVectorProperty FocusBacklashNP;
-		
-		INumber FocusResolutionN[1];
-		INumberVectorProperty FocusResolutionNP;
-
-		INumber FocusSpeedN[1];
-		INumberVectorProperty FocusSpeedNP;
-		
-        ISwitch MotorDirS[2];
-        ISwitchVectorProperty MotorDirSP;	
     public:
         FocusRpi();
         virtual ~FocusRpi();
@@ -58,11 +39,35 @@ class FocusRpi : public INDI::Focuser
         virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
         virtual bool ISSnoopDevice(XMLEle *root);
         virtual bool saveConfigItems(FILE *fp);
-
+    protected:
 		virtual IPState MoveFocuser(FocusDirection dir, int speed, int duration);
         virtual IPState MoveAbsFocuser(int ticks);
         virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
-        virtual bool SetResolution(int speed);
+        virtual bool ReverseFocuser(bool enabled);
+		virtual bool AbortFocuser();
+        virtual void TimerHit();
+    private: 
+		INumber FocusBacklashN[1];
+		INumberVectorProperty FocusBacklashNP;
+		
+		INumber FocusResolutionN[1];
+		INumberVectorProperty FocusResolutionNP;
+
+		INumber FocusStepDelayN[1];
+		INumberVectorProperty FocusStepDelayNP;
+		
+        ISwitch MotorDirS[2];
+        ISwitchVectorProperty MotorDirSP;	
+
+        ISwitch MotorBoardS[2];
+        ISwitchVectorProperty MotorBoardSP;	
+
+		INumber MotorStandbyN[1];
+		INumberVectorProperty MotorStandbyNP;
+
+        virtual int SetResolution(int speed);
+        virtual int regPosition(int pos);
+        int timerID { -1 };
 };
 
 #endif

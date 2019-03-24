@@ -9,7 +9,10 @@ https://github.com/rkaczorek/astroberry-diy
 # Requirements
 * INDI available here http://indilib.org/download.html
 * bcm2835 available here http://www.airspayce.com/mikem/bcm2835/ (no need to install separately, it will be downloaded and compiled during drivers compilation)
+* WiringPi (install it from http://wiringpi.com/download-and-install/)
 * CMake >= 2.4.7
+
+Note: Driver used BCM2835 by default. If you prefer to use WiringPi as a low level hardware library use -DWITH_WIRINGPI=ON at compilation time (see below)
 
 # Installation
 You need to download and install INDI server and libraries before compiling Astroberry DIY. See [INDI site](http://indilib.org/download.html) for more details.
@@ -17,7 +20,7 @@ In most cases it's enough to run:
 ```
 sudo apt-add-repository ppa:mutlaqja/ppa
 sudo apt-get update
-sudo apt-get install indi-full
+sudo apt-get install indi-full libindi-dev
 ```
 
 Then you can compile the drivers:
@@ -29,7 +32,7 @@ cmake -DWITH_WIRINGPI=OFF -DCMAKE_INSTALL_PREFIX=/usr ..
 make
 sudo make install
 ```
-Note: Set -DWITH_WIRINGPI=ON to use WiringPi library as a low level hardware library, instead BCM2835 
+Note: Set -DWITH_WIRINGPI=ON to use WiringPi library as a low level hardware library instead of BCM2835 
 
 # How to use it?
 Start INDI server with the drivers:
@@ -41,16 +44,17 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
 # What hardware is needed for Astroberry DIY drivers?
 
 1. Astroberry Focuser
-* Stepper motor eg. 28HS32-0674(200 steps/revolution 3,8V / 0,67A / 0,06Nm)
-* Stepper motor controller eg. DRV8834 (10,8V / 2A)
-  Wiring Raspberry Pi to the motor controller:
-   - GPIO04 - DIR
-   - GPIO17 - STEP
-   - GPIO22 - M0
-   - GPIO27 - M1
-   - GPIO23 - SLEEP
+* Stepper motor
+* Stepper motor controller - DRV8834 and A4988 are supported
+  Motor controller to Raspberry Pi wiring:
+   - GPIO04 / PIN7 - DIR
+   - GPIO17 / PIN11 - STEP
+   - GPIO22 / PIN15 - M1 / M0
+   - GPIO27 / PIN13 - M2 / M1
+   - GPIO24 / PIN18 - M3 / N/A
+   - GPIO23 / PIN16 - SLEEP
      Note: Make sure you connect the stepper motor correctly to the controller (B2, B1 and A2, A1 pins on the controller).
-           Remember to protect the 5V power line connected to VMOT pin on the motor controller with 100uF capacitor.
+           Remember to protect the power line connected to VMOT of the motor controller with 100uF capacitor.
 
 2. Astroberry Board
 * Power switch board eg. YwRobot 4 relay
@@ -62,11 +66,19 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
      Note: All inputs are set to HIGH by default. YwRobot board requires input to be LOW to swich ON a line.
 
 # Changelog
+v1.2.0
+* indi_rpifocus - major update to version 2.3
+  - added: support for A4988 controller
+  - added: standby mode
+  - parking mode removed in favor of focuser position remembered between runs
+  - reset button removed
+  - stepper resolution improved
 
 v1.1.0
 * indi_rpigps -	removed because already stable version is distributed with core INDI library
 * indi_rpialtimu  - removed because separate project is maintained for this driver (https://github.com/rkaczorek/astroberry-altimu)
-* indi_rpifocus -	ADDED:stepper resolution, speed control, direction control, configurable max absolute position
+* indi_rpifocus -	update to version 2.2
+  - ADDED:stepper resolution, speed control, direction control, configurable max absolute position
 
 v1.0.5
 * all -	Sync to latest libindi changes. Focuser controller mapping removed
