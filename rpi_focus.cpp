@@ -155,7 +155,7 @@ bool FocusRpi::Connect()
     pinMode(M3, OUTPUT);
 
 //	DriverInfoT[3].text = (char*)"WiringPi";
-//	IDSetText(&DriverInfoTP, nullptr);  
+//	IDSetText(&DriverInfoTP, nullptr);
 
 	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser using WiringPi interface.");
 #else
@@ -199,9 +199,9 @@ bool FocusRpi::Connect()
 #endif
 
 	timerID = SetTimer(60 * 1000 * MotorStandbyN[0].value); // setup and sleep
-	
+
     DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
-    
+
     return true;
 }
 
@@ -231,7 +231,7 @@ bool FocusRpi::Disconnect()
 #endif
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
-    
+
     return true;
 }
 
@@ -260,17 +260,17 @@ bool FocusRpi::initProperties()
 	FocusMaxPosN[0].max = 20000;
 	FocusMaxPosN[0].step = 1000;
 	FocusMaxPosN[0].value = 20000;
-	
+
 	FocusRelPosN[0].min = 0;
 	FocusRelPosN[0].max = 1000;
 	FocusRelPosN[0].step = 200;
 	FocusRelPosN[0].value = 200;
-	
+
 	FocusAbsPosN[0].min = 0;
 	FocusAbsPosN[0].max = FocusMaxPosN[0].value;
 	FocusAbsPosN[0].step = (int) FocusAbsPosN[0].max / 100;
 	FocusAbsPosN[0].value = regPosition(-1) != -1 ? regPosition(-1) : 0; //read last position from file
-	
+
 	FocusMotionS[FOCUS_OUTWARD].s = ISS_ON;
 	FocusMotionS[FOCUS_INWARD].s = ISS_OFF;
 	IDSetSwitch(&FocusMotionSP, nullptr);
@@ -281,7 +281,7 @@ bool FocusRpi::initProperties()
 void FocusRpi::ISGetProperties (const char *dev)
 {
     INDI::Focuser::ISGetProperties(dev);
-    
+
     return;
 }
 
@@ -337,11 +337,11 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
 			//FOCUS_INWARD
 			if ( FocusMotionS[0].s == ISS_ON )
 				FocusRelPosNP.s = MoveRelFocuser(FOCUS_INWARD, FocusRelPosN[0].value);
-			
+
 			//FOCUS_OUTWARD
 			if ( FocusMotionS[1].s == ISS_ON )
 				FocusRelPosNP.s = MoveRelFocuser(FOCUS_OUTWARD, FocusRelPosN[0].value);
-			
+
 			IDSetNumber(&FocusRelPosNP, nullptr);
 			return true;
         }
@@ -387,13 +387,13 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
 			IDSetNumber(&FocusAbsPosNP, nullptr);
 
 			deleteProperty(FocusRelPosNP.name);
-			defineNumber(&FocusRelPosNP);	
+			defineNumber(&FocusRelPosNP);
 
 			deleteProperty(FocusAbsPosNP.name);
 			defineNumber(&FocusAbsPosNP);
 
 			deleteProperty(FocusMaxPosNP.name);
-			defineNumber(&FocusMaxPosNP);			
+			defineNumber(&FocusMaxPosNP);
 
 			deleteProperty(FocusReverseSP.name);
 			defineSwitch(&FocusReverseSP);
@@ -471,7 +471,7 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 			PresetGotoSP.s = IPS_OK;
 
             IDSetSwitch(&PresetGotoSP, nullptr);
-            
+
             return true;
         }
 
@@ -517,7 +517,8 @@ bool FocusRpi::saveConfigItems(FILE *fp)
 {
     IUSaveConfigNumber(fp, &FocusMaxPosNP);
     IUSaveConfigNumber(fp, &PresetNP);
-	IUSaveConfigSwitch(fp, &MotorBoardSP);
+    IUSaveConfigSwitch(fp, &FocusReverseSP);
+    IUSaveConfigSwitch(fp, &MotorBoardSP);
     IUSaveConfigNumber(fp, &MotorStandbyNP);
     IUSaveConfigNumber(fp, &FocusBacklashNP);
     IUSaveConfigNumber(fp, &FocusStepDelayNP);
@@ -645,7 +646,7 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
 
 		IDSetNumber(&FocusAbsPosNP, nullptr);
     }
-	
+
 	//save position to file
 	regPosition(FocusAbsPosN[0].value);
 
@@ -669,7 +670,7 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
 int FocusRpi::SetResolution(int res)
 {
 	int resolution = 1;
-	
+
 	if (MotorBoardS[0].s == ISS_ON) {
 
 		/* Stepper motor resolution settings for ==== DRV8834 =====
