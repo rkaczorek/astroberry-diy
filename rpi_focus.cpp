@@ -63,6 +63,18 @@ std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 #define SLEEP RPI_BPLUS_GPIO_J8_16	// GPIO23
 #endif
 
+/*
+ Maximum resolution switch
+ 1 - 1/1
+ 2 - 1/2
+ 3 - 1/4
+ 4 - 1/8
+ 5 - 1/16
+ 6 - 1/32
+ Note that values 3 - 6 do not always work. Set to 2 by default
+*/ 
+#define MAX_RESOLUTION 2
+
 void ISPoll(void *p);
 
 
@@ -147,12 +159,6 @@ bool FocusRpi::Connect()
 		DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Focuser.");
 		return false;
 	}
-    pinMode(DIR, OUTPUT);
-    pinMode(STEP, OUTPUT);
-    pinMode(SLEEP, OUTPUT);
-    pinMode(M1, OUTPUT);
-    pinMode(M2, OUTPUT);
-    pinMode(M3, OUTPUT);
 
 //	DriverInfoT[3].text = (char*)"WiringPi";
 //	IDSetText(&DriverInfoTP, nullptr);
@@ -176,29 +182,29 @@ bool FocusRpi::Connect()
     exportgpio << SLEEP << std::endl;
     exportgpio.close();
 
-    // Set gpios to output mode
-    bcm2835_gpio_fsel(DIR, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(STEP, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SLEEP, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(M3, BCM2835_GPIO_FSEL_OUTP);
-
-	// Starting levels
-	bcm2835_gpio_write(DIR, LOW);
-	bcm2835_gpio_write(STEP, LOW);
-	bcm2835_gpio_write(SLEEP, HIGH);
-	bcm2835_gpio_write(M1, LOW);
-	bcm2835_gpio_write(M2, LOW);
-	bcm2835_gpio_write(M3, LOW);
-
 //	DriverInfoT[3].text = (char*)"BCM2835";
 //	IDSetText(&DriverInfoTP, nullptr);
 
 	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser using BCM2835 interface.");
 #endif
 
-	timerID = SetTimer(60 * 1000 * MotorStandbyN[0].value); // setup and sleep
+    // Set gpios to output mode
+    bcm2835_gpio_fsel(DIR, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(STEP, BCM2835_GPIO_FSEL_OUTP);
+    bcm2835_gpio_fsel(SLEEP, BCM2835_GPIO_FSEL_OUTP);
+
+	// Starting levels
+	bcm2835_gpio_write(DIR, LOW);
+	bcm2835_gpio_write(STEP, LOW);
+	bcm2835_gpio_write(SLEEP, HIGH);
+
+	//read last position from file & convert from MAX_RESOLUTION to current resolution
+	FocusAbsPosN[0].value = regPosition(-1) != -1 ? (int) regPosition(-1) * SetResolution(FocusResolutionN[0].value) / SetResolution(MAX_RESOLUTION) : 0;
+	// preset resolution
+	SetResolution(FocusResolutionN[0].value);
+
+	// set motor standby timer
+	timerID = SetTimer(60 * 1000 * MotorStandbyN[0].value);
 
     DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
 
@@ -242,8 +248,7 @@ bool FocusRpi::initProperties()
 	IUFillNumber(&FocusBacklashN[0], "FOCUS_BACKLASH_VALUE", "steps", "%0.0f", 0, 1000, 10, 0);
 	IUFillNumberVector(&FocusBacklashNP, FocusBacklashN, 1, getDeviceName(), "FOCUS_BACKLASH", "Backlash", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
-	//IUFillNumber(&FocusResolutionN[0], "FOCUS_RESOLUTION_VALUE", "microsteps", "%0.0f", 1, 6, 1, 1); // missing steps for resulution higher than 1/2
-	IUFillNumber(&FocusResolutionN[0], "FOCUS_RESOLUTION_VALUE", "microsteps", "%0.0f", 1, 2, 1, 1);
+	IUFillNumber(&FocusResolutionN[0], "FOCUS_RESOLUTION_VALUE", "1/n steps", "%0.0f", 1, MAX_RESOLUTION, 1, 1);
 	IUFillNumberVector(&FocusResolutionNP, FocusResolutionN, 1, getDeviceName(), "FOCUS_RESOLUTION", "Resolution", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
 	IUFillNumber(&FocusStepDelayN[0], "FOCUS_STEPDELAY_VALUE", "milliseconds", "%0.0f", 1, 10, 1, 1);
@@ -269,7 +274,7 @@ bool FocusRpi::initProperties()
 	FocusAbsPosN[0].min = 0;
 	FocusAbsPosN[0].max = FocusMaxPosN[0].value;
 	FocusAbsPosN[0].step = (int) FocusAbsPosN[0].max / 100;
-	FocusAbsPosN[0].value = regPosition(-1) != -1 ? regPosition(-1) : 0; //read last position from file
+//	FocusAbsPosN[0].value = regPosition(-1) != -1 ? regPosition(-1) * SetResolution(FocusResolutionN[0].value) : 0; //read last position from file
 
 	FocusMotionS[FOCUS_OUTWARD].s = ISS_ON;
 	FocusMotionS[FOCUS_INWARD].s = ISS_OFF;
@@ -486,14 +491,14 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
 			// set max resolution for motor model
 			if ( MotorBoardS[0].s == ISS_ON)
 			{
-				// FocusResolutionN[0].max = 6; // missing steps for resulution higher than 1/2
+				FocusResolutionN[0].max = MAX_RESOLUTION;
 				DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser control board set to DRV8834");
 			}
 			if ( MotorBoardS[1].s == ISS_ON)
 			{
 				if ( FocusResolutionN[0].value > 5 )
 					FocusResolutionN[0].value = 5;
-				// FocusResolutionN[0].max = 5; // missing steps for resulution higher than 1/2
+				FocusResolutionN[0].max = MAX_RESOLUTION;
 				DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser control board set to A4988");
 			}
 			IDSetNumber(&FocusResolutionNP, nullptr);
@@ -648,7 +653,7 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     }
 
 	//save position to file
-	regPosition(FocusAbsPosN[0].value);
+	regPosition((int) FocusAbsPosN[0].value * SetResolution(MAX_RESOLUTION) / SetResolution(FocusResolutionN[0].value)); // always save at MAX_RESOLUTION
 
     // update abspos value and status
     DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Focuser at the position %0.0f", FocusAbsPosN[0].value);
