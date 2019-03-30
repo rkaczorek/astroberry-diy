@@ -79,5 +79,6 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
    - GPIO05 / PIN29 - IN1
    - GPIO06 / PIN31 - IN2
    - GPIO13 / PIN33 - IN3
-   - GPIO26 / PIN37 - IN4
-     Note: All inputs are set to HIGH by default. YwRobot board requires input to be LOW to swich ON a line.
+   - GPIO19 / PIN35 - IN4
+
+   Note: All inputs are set to HIGH by default. YwRobot board requires input to be LOW to swich ON a line.

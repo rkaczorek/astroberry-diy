@@ -30,7 +30,7 @@ std::unique_ptr<IndiRpibrd> indiRpibrd(new IndiRpibrd());
 #define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5
 #define IN2 RPI_BPLUS_GPIO_J8_31	// GPIO06
 #define IN3 RPI_BPLUS_GPIO_J8_33	// GPIO13
-#define IN4 RPI_BPLUS_GPIO_J8_37	// GPIO26
+#define IN4 RPI_BPLUS_GPIO_J8_35	// GPIO19
 
 void ISPoll(void *p);
 void ISInit()
@@ -139,7 +139,7 @@ bool IndiRpibrd::Disconnect()
     unexportgpio << IN4 << std::endl;
     unexportgpio.close();
     bcm2835_close();
-*/    	
+*/
     IDMessage(getDeviceName(), "Astroberry Board disconnected successfully.");
     return true;
 }
@@ -168,7 +168,7 @@ void IndiRpibrd::TimerHit()
 
 			FILE* pipe;
 			char buffer[128];
-			
+
 			//update Hardware
 			pipe = popen("cat /proc/cpuinfo|grep Hardware|awk -F: '{print $2}'", "r");
 			fgets(buffer, 128, pipe);
@@ -178,13 +178,13 @@ void IndiRpibrd::TimerHit()
 			//update uptime
 			pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'", "r");
 			fgets(buffer, 128, pipe);
-			pclose(pipe);		
+			pclose(pipe);
 			IUSaveText(&SysInfoT[1], buffer);
 
 			//update load
 			pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'", "r");
 			fgets(buffer, 128, pipe);
-			pclose(pipe);		
+			pclose(pipe);
 			IUSaveText(&SysInfoT[2], buffer);
 
 			//update Hostname
@@ -211,11 +211,11 @@ void IndiRpibrd::TimerHit()
 			// reset system halt/restart button
 			Switch0SP.s = IPS_IDLE;
 			IDSetSwitch(&Switch0SP, NULL);
-						
+
 			counter = 10;
 		}
 		counter--;
-		
+
 		SetTimer(1000);
     }
 }
@@ -232,14 +232,14 @@ bool IndiRpibrd::initProperties()
     IUFillText(&SysTimeT[1],"UTC_OFFSET","UTC Offset",NULL);
     IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
-    IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);    
+    IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);
     IUFillText(&SysInfoT[1],"UPTIME","Uptime (hh:mm)",NULL);
     IUFillText(&SysInfoT[2],"LOAD","Load (1/5/15 min.)",NULL);
     IUFillText(&SysInfoT[3],"HOSTNAME","Hostname",NULL);
     IUFillText(&SysInfoT[4],"LOCAL_IP","Local IP",NULL);
     IUFillText(&SysInfoT[5],"PUBLIC_IP","Public IP",NULL);
     IUFillTextVector(&SysInfoTP,SysInfoT,6,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
-    
+
     IUFillSwitch(&Switch0S[0], "SW0HALT", "Shutdown", ISS_OFF);
     IUFillSwitch(&Switch0S[1], "SW0REBOOT", "Restart", ISS_OFF);
     IUFillSwitchVector(&Switch0SP, Switch0S, 2, getDeviceName(), "SWITCH_0", "System", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
@@ -275,7 +275,7 @@ bool IndiRpibrd::updateProperties()
 		defineSwitch(&Switch1SP);
 		defineSwitch(&Switch2SP);
 		defineSwitch(&Switch3SP);
-		defineSwitch(&Switch4SP);	
+		defineSwitch(&Switch4SP);
     }
     else
     {
@@ -474,7 +474,7 @@ bool IndiRpibrd::saveConfigItems(FILE *fp)
 	IUSaveConfigSwitch(fp, &Switch2SP);
 	IUSaveConfigSwitch(fp, &Switch3SP);
 	IUSaveConfigSwitch(fp, &Switch4SP);
-        
+
     //controller->saveConfigItems(fp);
 
     return true;
@@ -497,7 +497,7 @@ bool IndiRpibrd::LoadLines()
 		IDSetSwitch(&Switch1SP, NULL);
 	}
 
-	// load line 2 state 
+	// load line 2 state
 	if ( bcm2835_gpio_lev(IN2) == LOW )
 	{
 		Switch2S[0].s = ISS_ON;
@@ -513,7 +513,7 @@ bool IndiRpibrd::LoadLines()
 		IDSetSwitch(&Switch2SP, NULL);
 	}
 
-	// load line 3 state 
+	// load line 3 state
 	if ( bcm2835_gpio_lev(IN3) == LOW )
 	{
 		Switch3S[0].s = ISS_ON;
@@ -529,7 +529,7 @@ bool IndiRpibrd::LoadLines()
 		IDSetSwitch(&Switch3SP, NULL);
 	}
 
-	// load line 4 state 
+	// load line 4 state
 	if ( bcm2835_gpio_lev(IN4) == LOW )
 	{
 		Switch4S[0].s = ISS_ON;
