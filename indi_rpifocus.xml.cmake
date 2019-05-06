@@ -3,7 +3,7 @@
 <devGroup group="Focusers">
 	<device label="Astroberry Focuser">
 		<driver name="Astroberry Focuser">indi_rpifocus</driver>
-        <version>2.3</version>
+		<version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
 </devGroup>
 </driversList>

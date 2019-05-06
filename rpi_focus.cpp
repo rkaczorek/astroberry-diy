@@ -21,6 +21,7 @@
 #include <memory>
 #include <string.h>
 #include <fstream>
+#include "config.h"
 
 #ifdef WIRINGPI
 #include <wiringPi.h>
@@ -72,7 +73,7 @@ std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
  5 - 1/16
  6 - 1/32
  Note that values 3 - 6 do not always work. Set to 2 by default
-*/ 
+*/
 #define MAX_RESOLUTION 2
 
 void ISPoll(void *p);
@@ -135,7 +136,7 @@ void ISSnoopDevice (XMLEle *root)
 
 FocusRpi::FocusRpi()
 {
-	setVersion(2,3);
+	setVersion(VERSION_MAJOR,VERSION_MINOR);
 	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE); // | FOCUSER_CAN_ABORT);
 	Focuser::setSupportedConnections(CONNECTION_NONE);
 }

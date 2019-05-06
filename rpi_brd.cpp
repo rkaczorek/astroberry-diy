@@ -18,19 +18,48 @@
 
 #include <stdio.h>
 #include <memory>
-#include <bcm2835.h>
 #include <string.h>
+#include "config.h"
 
 #include "rpi_brd.h"
+
+#ifdef WIRINGPI
+#include <wiringPi.h>
+#else
+#include <bcm2835.h>
+#endif
+
 
 // We declare an auto pointer to IndiRpibrd
 std::unique_ptr<IndiRpibrd> indiRpibrd(new IndiRpibrd());
 
+// map BCM2835 to WiringPi
+#ifdef WIRINGPI
+#define bcm2835_gpio_write digitalWrite
+#define bcm2835_gpio_set_pud pullUpDnControl
+#define bcm2835_delay delay
+#define bcm2835_gpio_lev digitalRead
+#define bcm2835_gpio_fsel pinMode
+#define BCM2835_GPIO_FSEL_OUTP OUTPUT
+#define BCM2835_GPIO_FSEL_INPT INPUT
+#define BCM2835_GPIO_PUD_OFF PUD_OFF
+#endif
+
 // indicate GPIOs used - use P1_* pin numbers not gpio numbers (!!!)
+
+// indicate GPIOs used
+#ifdef WIRINGPI
+#define IN1 29
+#define IN2 31
+#define IN3 33
+#define IN4 35
+#else
+// For BCM2835 use P1_* pin numbers not gpio numbers (!!!)
 #define IN1 RPI_BPLUS_GPIO_J8_29	// GPIOO5
 #define IN2 RPI_BPLUS_GPIO_J8_31	// GPIO06
 #define IN3 RPI_BPLUS_GPIO_J8_33	// GPIO13
 #define IN4 RPI_BPLUS_GPIO_J8_35	// GPIO19
+#endif
 
 void ISPoll(void *p);
 void ISInit()
@@ -82,13 +111,31 @@ void ISSnoopDevice (XMLEle *root)
 }
 IndiRpibrd::IndiRpibrd()
 {
-	setVersion(2,1);
+    setVersion(VERSION_MAJOR,VERSION_MINOR);
+}
+IndiRpibrd::~IndiRpibrd()
+{
+}
+bool IndiRpibrd::Connect()
+{
+#ifdef WIRINGPI
+    int ret=!wiringPiSetupPhys();
+        if (!ret)
+        {
+                DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Board.");
+                return false;
+        }
 
+//      DriverInfoT[3].text = (char*)"WiringPi";
+//      IDSetText(&DriverInfoTP, nullptr);
+
+        DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Board using WiringPi interface.");
+#else
     if (!bcm2835_init())
     {
-		IDLog("Problem initiating Astroberry Board.");
-		return;
-	}
+                DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Board.");
+                return false;
+        }
 
     // init GPIOs
     std::ofstream exportgpio;
@@ -99,23 +146,24 @@ IndiRpibrd::IndiRpibrd()
     exportgpio << IN4 << std::endl;
     exportgpio.close();
 
+//      DriverInfoT[3].text = (char*)"BCM2835";
+//      IDSetText(&DriverInfoTP, nullptr);
+
+    DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Board using BCM2835 interface.");
+#endif
+
     // Set gpios to output mode
     bcm2835_gpio_fsel(IN1, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(IN2, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(IN3, BCM2835_GPIO_FSEL_OUTP);
     bcm2835_gpio_fsel(IN4, BCM2835_GPIO_FSEL_OUTP);
 
-	bcm2835_gpio_write(IN1, HIGH);
-	bcm2835_gpio_write(IN2, HIGH);
-	bcm2835_gpio_write(IN3, HIGH);
-	bcm2835_gpio_write(IN4, HIGH);
-}
-IndiRpibrd::~IndiRpibrd()
-{
-}
-bool IndiRpibrd::Connect()
-{
-	SetTimer(1000);
+    bcm2835_gpio_write(IN1, HIGH);
+    bcm2835_gpio_write(IN2, HIGH);
+    bcm2835_gpio_write(IN3, HIGH);
+    bcm2835_gpio_write(IN4, HIGH);
+
+    SetTimer(1000);
 /*
 	if ( !IndiRpibrd::LoadLines() )
 	{

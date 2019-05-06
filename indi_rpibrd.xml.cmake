@@ -3,7 +3,7 @@
 <devGroup group="Auxiliary">
 	<device label="Astroberry Board">
 		<driver name="Astroberry Board">indi_rpibrd</driver>
-        <version>2.1</version>
+		<version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
 </devGroup>
 </driversList>
