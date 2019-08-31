@@ -68,7 +68,7 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
    - GPIO22 / PIN15 - M1 / M0
    - GPIO27 / PIN13 - M2 / M1
    - GPIO24 / PIN18 - M3 / N/A
-   - GPIO23 / PIN16 - SLEEP
+   - GPIO23 / PIN16 - SLEEP + RST
 
    Note: Make sure you connect the stepper motor correctly to the controller (B2, B1 and A2, A1 pins on the controller).
          Remember to protect the power line connected to VMOT of the motor controller with 100uF capacitor.
