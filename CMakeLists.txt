@@ -45,7 +45,7 @@ else()
 	set (ASTROBERRY_LIBRARIES "bcm2835")
 
 	ExternalProject_Add(libbcm2835
-		URL "http://www.airspayce.com/mikem/bcm2835/bcm2835-1.52.tar.gz"
+		URL "http://www.airspayce.com/mikem/bcm2835/bcm2835-1.60.tar.gz"
 		SOURCE_DIR ${CMAKE_SOURCE_DIR}/libs/bcm2835-1.52
 		PREFIX ${CMAKE_CURRENT_BINARY_DIR}/bcm2835-1.52
 		CONFIGURE_COMMAND ./configure
