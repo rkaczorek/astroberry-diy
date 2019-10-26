@@ -1,9 +1,16 @@
+v1.2.3
+* bcm2835 dependency removed - from now on only wiringpi low level library is supported
+  - update: README
+  - added: debian packaging files
+  - update: CMakeLists.txt
+  - added: cmake_modules
+
 v1.2.2
 * indi_rpifocus - hot fixes to version 2.3
   - fixed: reading/saving focuser position independent of resolution (always save in max resolution)
   - update: README
   - add: separate Changelog file
-  
+
 v1.2.1
 * indi_rpifocus - hot fixes to version 2.3
   - added: saving status of stepper reverse direction
@@ -26,16 +33,16 @@ v1.1.0
 
 v1.0.5
 * all -	Sync to latest libindi changes. Focuser controller mapping removed
-* other -	Adding bcm2835-1.52 lib and setting statical linking
+* other - Adding bcm2835-1.52 lib and setting statical linking
 
 v1.0.4
-* indi_rpifocus	-	Sync to latest libindi changes. Focuser controller mapping added
-* other -	FindINDI/cmake updated to the latest version
+* indi_rpifocus	- Sync to latest libindi changes. Focuser controller mapping added
+* other - FindINDI/cmake updated to the latest version
 
 v1.0.3
-* indi_rpigps	-	Sync to latest INDI::GPS changes
-* indi_rpibrd	-	Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
-* indi_rpifocus	-	Code improvements
+* indi_rpigps	- Sync to latest INDI::GPS changes
+* indi_rpibrd	- Added: 1) system shutdown and restart buttons, 2) System info (board, uptime, load, ip) 3) System time info
+* indi_rpifocus	- Code improvements
 
 v1.0.2
 * indi_rpigps - Rewrite fo the driver to sync with libindi changes (GPS::INDI)

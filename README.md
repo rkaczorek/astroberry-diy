@@ -8,35 +8,23 @@ https://github.com/rkaczorek/astroberry-diy
 
 # Requirements
 * INDI available here http://indilib.org/download.html
-* bcm2835 available here http://www.airspayce.com/mikem/bcm2835/ (no need to install separately, it will be downloaded and compiled during drivers compilation)
 * WiringPi (install it from http://wiringpi.com/download-and-install/)
 * CMake >= 2.4.7
 
-Note: Driver used BCM2835 by default. If you prefer to use WiringPi as a low level hardware library use -DWITH_WIRINGPI=ON at compilation time (see below)
-
 # Installation
-You need to download and install INDI server and libraries before compiling Astroberry DIY. See [INDI site](http://indilib.org/download.html) for more details.
+You need to download and install required libraries before compiling Astroberry DIY. See [INDI site](http://indilib.org/download.html) for more details.
 In most cases it's enough to run:
 ```
-sudo apt-get install cmake indi-full libindi-dev
+sudo apt-get install cmake indi-full libindi-dev wiringpi
 ```
-If it does not work you probably don't have indi repository configured in your system. In such the case run:
-```
-sudo apt-add-repository ppa:mutlaqja/ppa
-sudo apt-get update
-sudo apt-get install cmake indi-full libindi-dev
-```
-
 Then you need to compile the drivers:
 ```
 git clone https://github.com/rkaczorek/astroberry-diy.git
 cd astroberry-diy
 mkdir build && cd build
-cmake -DWITH_WIRINGPI=OFF -DCMAKE_INSTALL_PREFIX=/usr ..
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 make
 ```
-Note: Set -DWITH_WIRINGPI=ON to use WiringPi library as a low level hardware library instead of BCM2835 
-
 You can install the drivers by running:
 ```
 sudo make install
@@ -81,4 +69,4 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
    - GPIO13 / PIN33 - IN3
    - GPIO19 / PIN35 - IN4
 
-   Note: All inputs are set to HIGH by default. YwRobot board requires input to be LOW to swich ON a line.
+   Note: All inputs are set to HIGH by default. Most relay boards require input to be LOW to swich ON a line.

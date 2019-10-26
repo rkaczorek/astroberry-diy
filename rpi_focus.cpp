@@ -23,46 +23,20 @@
 #include <fstream>
 #include "config.h"
 
-#ifdef WIRINGPI
 #include <wiringPi.h>
-#else
-#include <bcm2835.h>
-#endif
 
 #include "rpi_focus.h"
 
 // We declare an auto pointer to focusRpi.
 std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
 
-// map BCM2835 to WiringPi
-#ifdef WIRINGPI
-#define bcm2835_gpio_write digitalWrite
-#define bcm2835_gpio_set_pud pullUpDnControl
-#define bcm2835_delay delay
-#define bcm2835_gpio_lev digitalRead
-#define bcm2835_gpio_fsel pinMode
-#define BCM2835_GPIO_FSEL_OUTP OUTPUT
-#define BCM2835_GPIO_FSEL_INPT INPUT
-#define BCM2835_GPIO_PUD_OFF PUD_OFF
-#endif
-
 // indicate GPIOs used
-#ifdef WIRINGPI
 #define DIR 7
 #define STEP 11
 #define M1 15 // M0
 #define M2 13 // M1
 #define M3 18
 #define SLEEP 16
-#else
-// For BCM2835 use P1_* pin numbers not gpio numbers (!!!)
-#define DIR RPI_BPLUS_GPIO_J8_07	// GPIO4
-#define STEP RPI_BPLUS_GPIO_J8_11	// GPIO17
-#define M1 RPI_BPLUS_GPIO_J8_15		// GPIO22 // M1 // M0
-#define M2 RPI_BPLUS_GPIO_J8_13		// GPIO27 // M2 // M1
-#define M3 RPI_BPLUS_GPIO_J8_18		// GPIO24 // M3 // N/A
-#define SLEEP RPI_BPLUS_GPIO_J8_16	// GPIO23
-#endif
 
 /*
  Maximum resolution switch
@@ -153,7 +127,6 @@ const char * FocusRpi::getDefaultName()
 
 bool FocusRpi::Connect()
 {
-#ifdef WIRINGPI
     int ret=!wiringPiSetupPhys();
 	if (!ret)
 	{
@@ -165,39 +138,16 @@ bool FocusRpi::Connect()
 //	IDSetText(&DriverInfoTP, nullptr);
 
 	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser using WiringPi interface.");
-#else
-    if (!bcm2835_init())
-    {
-		DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Focuser.");
-		return false;
-	}
-
-    // init GPIOs
-    std::ofstream exportgpio;
-    exportgpio.open("/sys/class/gpio/export");
-    exportgpio << DIR << std::endl;
-    exportgpio << STEP << std::endl;
-    exportgpio << M1 << std::endl;
-    exportgpio << M2 << std::endl;
-    exportgpio << M3 << std::endl;
-    exportgpio << SLEEP << std::endl;
-    exportgpio.close();
-
-//	DriverInfoT[3].text = (char*)"BCM2835";
-//	IDSetText(&DriverInfoTP, nullptr);
-
-	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser using BCM2835 interface.");
-#endif
 
     // Set gpios to output mode
-    bcm2835_gpio_fsel(DIR, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(STEP, BCM2835_GPIO_FSEL_OUTP);
-    bcm2835_gpio_fsel(SLEEP, BCM2835_GPIO_FSEL_OUTP);
+    pinMode(DIR, OUTPUT);
+    pinMode(STEP, OUTPUT);
+    pinMode(SLEEP, OUTPUT);
 
 	// Starting levels
-	bcm2835_gpio_write(DIR, LOW);
-	bcm2835_gpio_write(STEP, LOW);
-	bcm2835_gpio_write(SLEEP, HIGH);
+	digitalWrite(DIR, LOW);
+	digitalWrite(STEP, LOW);
+	digitalWrite(SLEEP, HIGH);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
 	FocusAbsPosN[0].value = regPosition(-1) != -1 ? (int) regPosition(-1) * SetResolution(FocusResolutionN[0].value) / SetResolution(MAX_RESOLUTION) : 0;
@@ -214,28 +164,13 @@ bool FocusRpi::Connect()
 
 bool FocusRpi::Disconnect()
 {
-#ifndef WIRINGPI
-
 	// Starting levels
-	bcm2835_gpio_write(DIR, LOW);
-	bcm2835_gpio_write(STEP, LOW);
-	bcm2835_gpio_write(SLEEP, LOW); // stepper sleep
-	bcm2835_gpio_write(M1, LOW);
-	bcm2835_gpio_write(M2, LOW);
-	bcm2835_gpio_write(M3, LOW);
-
-    // close GPIOs
-    std::ofstream unexportgpio;
-    unexportgpio.open("/sys/class/gpio/unexport");
-    unexportgpio << DIR << std::endl;
-    unexportgpio << STEP << std::endl;
-    unexportgpio << M1 << std::endl;
-    unexportgpio << M2 << std::endl;
-    unexportgpio << M3 << std::endl;
-    unexportgpio << SLEEP << std::endl;
-    unexportgpio.close();
-    bcm2835_close();
-#endif
+	digitalWrite(DIR, LOW);
+	digitalWrite(STEP, LOW);
+	digitalWrite(SLEEP, LOW); // stepper sleep
+	digitalWrite(M1, LOW);
+	digitalWrite(M2, LOW);
+	digitalWrite(M3, LOW);
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
 
@@ -539,7 +474,7 @@ void FocusRpi::TimerHit()
 		return;
 
     // motor sleep
-	bcm2835_gpio_write(SLEEP, LOW);
+	digitalWrite(SLEEP, LOW);
 	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby");
 }
 
@@ -581,48 +516,48 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     IDSetNumber(&FocusAbsPosNP, nullptr);
 
     // motor wake up
-    if (bcm2835_gpio_lev(SLEEP) == LOW)
+    if (digitalRead(SLEEP) == LOW)
     {
-		bcm2835_gpio_write(SLEEP, HIGH);
+		digitalWrite(SLEEP, HIGH);
 		DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser motor waking up");
 	}
 
     // check last motion direction for backlash triggering
-    char lastdir = bcm2835_gpio_lev(DIR);
+    char lastdir = digitalRead(DIR);
 
     // set direction
     const char* direction;
     if (targetTicks > FocusAbsPosN[0].value)
     {
 		// OUTWARD
-		bcm2835_gpio_write(DIR, HIGH);
+		digitalWrite(DIR, HIGH);
 		direction = "OUTWARD";
     } else {
 		// INWARD
-		bcm2835_gpio_write(DIR, LOW);
+		digitalWrite(DIR, LOW);
 		direction = "INWARD";
     }
 
 	// handle Reverse Motion
 	if (FocusReverseS[REVERSED_ENABLED].s == ISS_ON) {
 		lastdir = (lastdir == LOW) ? lastdir == HIGH : lastdir == LOW;
-		(bcm2835_gpio_lev(DIR) == LOW) ? bcm2835_gpio_write(DIR, HIGH) : bcm2835_gpio_write(DIR, LOW);
+		(digitalRead(DIR) == LOW) ? digitalWrite(DIR, HIGH) : digitalWrite(DIR, LOW);
 	}
 
     // if direction changed do backlash adjustment
-    if ( bcm2835_gpio_lev(DIR) != lastdir && FocusBacklashN[0].value != 0)
+    if ( digitalRead(DIR) != lastdir && FocusBacklashN[0].value != 0)
     {
 		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser BACKLASH compensation by %0.0f steps", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
-			bcm2835_gpio_write(STEP, HIGH);
+			digitalWrite(STEP, HIGH);
 			// wait
-			bcm2835_delay(FocusStepDelayN[0].value);
+			delay(FocusStepDelayN[0].value);
 			// step off
-			bcm2835_gpio_write(STEP, LOW);
+			digitalWrite(STEP, LOW);
 			// wait
-			bcm2835_delay(FocusStepDelayN[0].value);
+			delay(FocusStepDelayN[0].value);
 		}
     }
 
@@ -634,13 +569,13 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     for ( int i = 0; i < ticks; i++ )
     {
         // step on
-        bcm2835_gpio_write(STEP, HIGH);
+        digitalWrite(STEP, HIGH);
         // wait
-        bcm2835_delay(FocusStepDelayN[0].value);
+        delay(FocusStepDelayN[0].value);
         // step off
-        bcm2835_gpio_write(STEP, LOW);
+        digitalWrite(STEP, LOW);
         // wait
-        bcm2835_delay(FocusStepDelayN[0].value);
+        delay(FocusStepDelayN[0].value);
 
 		// INWARD - count down
 		if ( direction == "INWARD" )
@@ -691,52 +626,52 @@ int FocusRpi::SetResolution(int res)
 		switch(res)
 		{
 			case 1:	// 1:1
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, LOW);
+				pinMode(M1, OUTPUT);
+				pinMode(M2, OUTPUT);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, LOW);
 				resolution = 1;
 				break;
 			case 2:	// 1:2
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_write(M1, HIGH);
-				bcm2835_gpio_write(M2, LOW);
+				pinMode(M1, OUTPUT);
+				pinMode(M2, OUTPUT);
+				digitalWrite(M1, HIGH);
+				digitalWrite(M2, LOW);
 				resolution = 2;
 				break;
 			case 3:	// 1:4
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_INPT);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_set_pud(M1, BCM2835_GPIO_PUD_OFF);
-				bcm2835_gpio_write(M2, LOW);
+				pinMode(M1, INPUT);
+				pinMode(M2, OUTPUT);
+				pullUpDnControl(M1, PUD_OFF);
+				digitalWrite(M2, LOW);
 				resolution = 4;
 				break;
 			case 4:	// 1:8
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, HIGH);
+				pinMode(M1, OUTPUT);
+				pinMode(M2, OUTPUT);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, HIGH);
 				resolution = 8;
 				break;
 			case 5:	// 1:16
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_write(M1, HIGH);
-				bcm2835_gpio_write(M2, HIGH);
+				pinMode(M1, OUTPUT);
+				pinMode(M2, OUTPUT);
+				digitalWrite(M1, HIGH);
+				digitalWrite(M2, HIGH);
 				resolution = 16;
 				break;
 			case 6:	// 1:32
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_INPT);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_set_pud(M1, BCM2835_GPIO_PUD_OFF);
-				bcm2835_gpio_write(M2, HIGH);
+				pinMode(M1, INPUT);
+				pinMode(M2, OUTPUT);
+				pullUpDnControl(M1, PUD_OFF);
+				digitalWrite(M2, HIGH);
 				resolution = 32;
 				break;
 			default:	// 1:1
-				bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, LOW);
+				pinMode(M1, OUTPUT);
+				pinMode(M2, OUTPUT);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, LOW);
 				resolution = 1;
 				break;
 		}
@@ -752,46 +687,46 @@ int FocusRpi::SetResolution(int res)
 		* 5) 1/16  - M1=1 M2=1 M3=1
 		*/
 
-		bcm2835_gpio_fsel(M1, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
-		bcm2835_gpio_fsel(M2, BCM2835_GPIO_FSEL_OUTP);
+		pinMode(M1, OUTPUT);
+		pinMode(M2, OUTPUT);
+		pinMode(M2, OUTPUT);
 
 		switch(res)
 		{
 			case 1:	// 1:1
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, LOW);
-				bcm2835_gpio_write(M3, LOW);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, LOW);
+				digitalWrite(M3, LOW);
 				resolution = 1;
 				break;
 			case 2:	// 1:2
-				bcm2835_gpio_write(M1, HIGH);
-				bcm2835_gpio_write(M2, LOW);
-				bcm2835_gpio_write(M3, LOW);
+				digitalWrite(M1, HIGH);
+				digitalWrite(M2, LOW);
+				digitalWrite(M3, LOW);
 				resolution = 2;
 				break;
 			case 3:	// 1:4
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, HIGH);
-				bcm2835_gpio_write(M3, LOW);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, HIGH);
+				digitalWrite(M3, LOW);
 				resolution = 4;
 				break;
 			case 4:	// 1:8
-				bcm2835_gpio_write(M1, HIGH);
-				bcm2835_gpio_write(M2, HIGH);
-				bcm2835_gpio_write(M3, LOW);
+				digitalWrite(M1, HIGH);
+				digitalWrite(M2, HIGH);
+				digitalWrite(M3, LOW);
 				resolution = 8;
 				break;
 			case 5:	// 1:16
-				bcm2835_gpio_write(M1, HIGH);
-				bcm2835_gpio_write(M2, HIGH);
-				bcm2835_gpio_write(M3, HIGH);
+				digitalWrite(M1, HIGH);
+				digitalWrite(M2, HIGH);
+				digitalWrite(M3, HIGH);
 				resolution = 16;
 				break;
 			default:	// 1:1
-				bcm2835_gpio_write(M1, LOW);
-				bcm2835_gpio_write(M2, LOW);
-				bcm2835_gpio_write(M3, LOW);
+				digitalWrite(M1, LOW);
+				digitalWrite(M2, LOW);
+				digitalWrite(M3, LOW);
 				resolution = 1;
 				break;
 		}
