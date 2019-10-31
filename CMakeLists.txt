@@ -29,7 +29,7 @@ set(indi_rpifocus_SRCS
    )
 
 IF (UNITY_BUILD)
-    ENABLE_UNITY_BUILD(indi_rpifocus_SRCS indi_rpifocus_SRCS 6 cpp)
+    ENABLE_UNITY_BUILD(indi_rpifocus indi_rpifocus_SRCS 6 cpp)
 ENDIF ()
 
 add_executable(indi_rpifocus ${indi_rpifocus_SRCS})
@@ -43,7 +43,7 @@ set(indi_rpibrd_SRCS
    )
 
 IF (UNITY_BUILD)
-    ENABLE_UNITY_BUILD(indi_rpibrd_SRCS indi_rpibrd_SRCS 6 cpp)
+    ENABLE_UNITY_BUILD(indi_rpibrd indi_rpibrd_SRCS 6 cpp)
 ENDIF ()
 
 add_executable(indi_rpibrd ${indi_rpibrd_SRCS})
