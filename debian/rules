@@ -5,3 +5,11 @@ include /usr/share/cdbs/1/class/cmake.mk
 
 DEB_SRCDIR=astroberry-diy
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
+
+NO_CPUS=$(shell nproc)
+ifeq ($(NO_CPUS),0)
+NO_CPUS=1
+endif
+
+MAKEFLAGS += -j$(NO_CPUS)
+
