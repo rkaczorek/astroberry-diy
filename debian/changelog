@@ -1,3 +1,9 @@
+indi-astroberry-diy (2.4) buster; urgency=medium
+
+  * Fixing resolution setting (closes: #10)
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Mon, 06 Jan 2020 11:11:09 +0100
+
 indi-astroberry-diy (2.3) buster; urgency=medium
 
   * Initial release.

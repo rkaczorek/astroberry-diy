@@ -689,7 +689,7 @@ int FocusRpi::SetResolution(int res)
 
 		pinMode(M1, OUTPUT);
 		pinMode(M2, OUTPUT);
-		pinMode(M2, OUTPUT);
+		pinMode(M3, OUTPUT);
 
 		switch(res)
 		{
