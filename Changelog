@@ -1,3 +1,6 @@
+v1.2.4
+* Resolution setting fixed
+
 v1.2.3
 * bcm2835 dependency removed - from now on only wiringpi low level library is supported
   - update: README
