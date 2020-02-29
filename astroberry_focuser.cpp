@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2014 Radek Kaczorek  <rkaczorek AT gmail DOT com>
+  Copyright(c) 2014-2020 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -23,20 +23,24 @@
 #include <fstream>
 #include "config.h"
 
-#include <wiringPi.h>
+#include <gpiod.h>
 
-#include "rpi_focus.h"
+#include "astroberry_focuser.h"
 
-// We declare an auto pointer to focusRpi.
-std::unique_ptr<FocusRpi> focusRpi(new FocusRpi());
+// We declare an auto pointer to AstroberryFocuser.
+std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 
-// indicate GPIOs used
-#define DIR 7
-#define STEP 11
-#define M1 15 // M0
-#define M2 13 // M1
-#define M3 18
-#define SLEEP 16
+// create millisecond sleep macro
+#define msleep(milliseconds) usleep(milliseconds * 1000)
+
+// DO NOT USE pin numbers!
+// BCM numbers ONLY
+#define DIR 4 // PIN7
+#define STEP 17 // PIN11
+#define M1 22 // PIN15
+#define M2 27 // PIN13
+#define M3 24 // PIN18
+#define SLEEP 23 // PIN16
 
 /*
  Maximum resolution switch
@@ -59,35 +63,35 @@ void ISInit()
 
    if (isInit == 1)
        return;
-   if(focusRpi.get() == 0)
+   if(astroberryFocuser.get() == 0)
    {
        isInit = 1;
-       focusRpi.reset(new FocusRpi());
+       astroberryFocuser.reset(new AstroberryFocuser());
    }
 }
 
 void ISGetProperties(const char *dev)
 {
         ISInit();
-        focusRpi->ISGetProperties(dev);
+        astroberryFocuser->ISGetProperties(dev);
 }
 
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
         ISInit();
-        focusRpi->ISNewSwitch(dev, name, states, names, num);
+        astroberryFocuser->ISNewSwitch(dev, name, states, names, num);
 }
 
 void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
 {
         ISInit();
-        focusRpi->ISNewText(dev, name, texts, names, num);
+        astroberryFocuser->ISNewText(dev, name, texts, names, num);
 }
 
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
         ISInit();
-        focusRpi->ISNewNumber(dev, name, values, names, num);
+        astroberryFocuser->ISNewNumber(dev, name, values, names, num);
 }
 
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
@@ -105,79 +109,73 @@ void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[],
 void ISSnoopDevice (XMLEle *root)
 {
     ISInit();
-    focusRpi->ISSnoopDevice(root);
+    astroberryFocuser->ISSnoopDevice(root);
 }
 
-FocusRpi::FocusRpi()
+AstroberryFocuser::AstroberryFocuser()
 {
 	setVersion(VERSION_MAJOR,VERSION_MINOR);
 	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE); // | FOCUSER_CAN_ABORT);
 	Focuser::setSupportedConnections(CONNECTION_NONE);
 }
 
-FocusRpi::~FocusRpi()
+AstroberryFocuser::~AstroberryFocuser()
 {
 
 }
 
-const char * FocusRpi::getDefaultName()
+const char * AstroberryFocuser::getDefaultName()
 {
         return (char *)"Astroberry Focuser";
 }
 
-bool FocusRpi::Connect()
+bool AstroberryFocuser::Connect()
 {
-    int ret=!wiringPiSetupPhys();
-	if (!ret)
+	chip = gpiod_chip_open("/dev/gpiochip0");
+	if (!chip)
 	{
 		DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Focuser.");
 		return false;
 	}
 
-//	DriverInfoT[3].text = (char*)"WiringPi";
-//	IDSetText(&DriverInfoTP, nullptr);
+	// Select gpios
+	gpio_dir = gpiod_chip_get_line(chip, DIR);
+	gpio_step = gpiod_chip_get_line(chip, STEP);
+	gpio_sleep = gpiod_chip_get_line(chip, SLEEP);
+	gpio_m1 = gpiod_chip_get_line(chip, M1);
+	gpio_m2 = gpiod_chip_get_line(chip, M2);
+	gpio_m3 = gpiod_chip_get_line(chip, M3);
 
-	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser using WiringPi interface.");
-
-    // Set gpios to output mode
-    pinMode(DIR, OUTPUT);
-    pinMode(STEP, OUTPUT);
-    pinMode(SLEEP, OUTPUT);
-
-	// Starting levels
-	digitalWrite(DIR, LOW);
-	digitalWrite(STEP, LOW);
-	digitalWrite(SLEEP, HIGH);
+	// Set initial gpios direction and default states
+	gpiod_line_request_output(gpio_dir, getDefaultName(), 0);
+	gpiod_line_request_output(gpio_step, getDefaultName(), 0);
+	gpiod_line_request_output(gpio_sleep, getDefaultName(), 1);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
 	FocusAbsPosN[0].value = regPosition(-1) != -1 ? (int) regPosition(-1) * SetResolution(FocusResolutionN[0].value) / SetResolution(MAX_RESOLUTION) : 0;
+
 	// preset resolution
 	SetResolution(FocusResolutionN[0].value);
 
 	// set motor standby timer
 	timerID = SetTimer(60 * 1000 * MotorStandbyN[0].value);
 
-    DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
+	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
 
-    return true;
+	return true;
 }
 
-bool FocusRpi::Disconnect()
+bool AstroberryFocuser::Disconnect()
 {
-	// Starting levels
-	digitalWrite(DIR, LOW);
-	digitalWrite(STEP, LOW);
-	digitalWrite(SLEEP, LOW); // stepper sleep
-	digitalWrite(M1, LOW);
-	digitalWrite(M2, LOW);
-	digitalWrite(M3, LOW);
+	// Close device
+	gpiod_chip_close(chip);
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
 
     return true;
 }
 
-bool FocusRpi::initProperties()
+bool AstroberryFocuser::initProperties()
 {
     INDI::Focuser::initProperties();
 
@@ -219,14 +217,14 @@ bool FocusRpi::initProperties()
     return true;
 }
 
-void FocusRpi::ISGetProperties (const char *dev)
+void AstroberryFocuser::ISGetProperties (const char *dev)
 {
     INDI::Focuser::ISGetProperties(dev);
 
     return;
 }
 
-bool FocusRpi::updateProperties()
+bool AstroberryFocuser::updateProperties()
 {
 
     INDI::Focuser::updateProperties();
@@ -251,7 +249,7 @@ bool FocusRpi::updateProperties()
     return true;
 }
 
-bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
+bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
 	// first we check if it's for our device
 	if(strcmp(dev,getDeviceName())==0)
@@ -382,7 +380,7 @@ bool FocusRpi::ISNewNumber (const char *dev, const char *name, double values[], 
     return INDI::Focuser::ISNewNumber(dev,name,values,names,n);
 }
 
-bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
+bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 	// first we check if it's for our device
     if (!strcmp(dev, getDeviceName()))
@@ -449,12 +447,12 @@ bool FocusRpi::ISNewSwitch (const char *dev, const char *name, ISState *states, 
     return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
 }
 
-bool FocusRpi::ISSnoopDevice (XMLEle *root)
+bool AstroberryFocuser::ISSnoopDevice (XMLEle *root)
 {
     return INDI::Focuser::ISSnoopDevice(root);
 }
 
-bool FocusRpi::saveConfigItems(FILE *fp)
+bool AstroberryFocuser::saveConfigItems(FILE *fp)
 {
     IUSaveConfigNumber(fp, &FocusMaxPosNP);
     IUSaveConfigNumber(fp, &PresetNP);
@@ -468,36 +466,36 @@ bool FocusRpi::saveConfigItems(FILE *fp)
     return true;
 }
 
-void FocusRpi::TimerHit()
+void AstroberryFocuser::TimerHit()
 {
 	if (!isConnected())
 		return;
 
     // motor sleep
-	digitalWrite(SLEEP, LOW);
+    gpiod_line_set_value(gpio_sleep, 0);
 	DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby");
 }
 
-bool FocusRpi::AbortFocuser()
+bool AstroberryFocuser::AbortFocuser()
 {
 	// TODO
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser aborting motion");
     return true;
 }
 
-IPState FocusRpi::MoveFocuser(FocusDirection dir, int speed, int duration)
+IPState AstroberryFocuser::MoveFocuser(FocusDirection dir, int speed, int duration)
 {
     int ticks = (int) ( duration / FocusStepDelayN[0].value);
     return 	MoveRelFocuser( dir, ticks);
 }
 
-IPState FocusRpi::MoveRelFocuser(FocusDirection dir, int ticks)
+IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, int ticks)
 {
     int targetTicks = FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
     return MoveAbsFocuser(targetTicks);
 }
 
-IPState FocusRpi::MoveAbsFocuser(int targetTicks)
+IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 {
     if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
     {
@@ -516,48 +514,48 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     IDSetNumber(&FocusAbsPosNP, nullptr);
 
     // motor wake up
-    if (digitalRead(SLEEP) == LOW)
+    if (gpiod_line_get_value(gpio_sleep) == 0)
     {
-		digitalWrite(SLEEP, HIGH);
+		gpiod_line_set_value(gpio_sleep, 1);
 		DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser motor waking up");
 	}
 
     // check last motion direction for backlash triggering
-    char lastdir = digitalRead(DIR);
+    char lastdir = gpiod_line_get_value(gpio_dir);
 
     // set direction
     const char* direction;
     if (targetTicks > FocusAbsPosN[0].value)
     {
 		// OUTWARD
-		digitalWrite(DIR, HIGH);
+		gpiod_line_set_value(gpio_dir, 1);
 		direction = "OUTWARD";
     } else {
 		// INWARD
-		digitalWrite(DIR, LOW);
+		gpiod_line_set_value(gpio_dir, 0);
 		direction = "INWARD";
     }
 
 	// handle Reverse Motion
 	if (FocusReverseS[REVERSED_ENABLED].s == ISS_ON) {
-		lastdir = (lastdir == LOW) ? lastdir == HIGH : lastdir == LOW;
-		(digitalRead(DIR) == LOW) ? digitalWrite(DIR, HIGH) : digitalWrite(DIR, LOW);
+		lastdir = (lastdir == 0) ? lastdir == 1 : lastdir == 0;
+		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
 	}
 
     // if direction changed do backlash adjustment
-    if ( digitalRead(DIR) != lastdir && FocusBacklashN[0].value != 0)
+    if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
     {
 		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser BACKLASH compensation by %0.0f steps", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
-			digitalWrite(STEP, HIGH);
+			gpiod_line_set_value(gpio_step, 1);
 			// wait
-			delay(FocusStepDelayN[0].value);
+			msleep(FocusStepDelayN[0].value);
 			// step off
-			digitalWrite(STEP, LOW);
+			gpiod_line_set_value(gpio_step, 0);
 			// wait
-			delay(FocusStepDelayN[0].value);
+			msleep(FocusStepDelayN[0].value);
 		}
     }
 
@@ -569,13 +567,13 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     for ( int i = 0; i < ticks; i++ )
     {
         // step on
-        digitalWrite(STEP, HIGH);
+        gpiod_line_set_value(gpio_step, 1);
         // wait
-        delay(FocusStepDelayN[0].value);
+        msleep(FocusStepDelayN[0].value);
         // step off
-        digitalWrite(STEP, LOW);
+        gpiod_line_set_value(gpio_step, 0);
         // wait
-        delay(FocusStepDelayN[0].value);
+        msleep(FocusStepDelayN[0].value);
 
 		// INWARD - count down
 		if ( direction == "INWARD" )
@@ -608,9 +606,14 @@ IPState FocusRpi::MoveAbsFocuser(int targetTicks)
     return IPS_OK;
 }
 
-int FocusRpi::SetResolution(int res)
+int AstroberryFocuser::SetResolution(int res)
 {
 	int resolution = 1;
+
+	// Release lines
+	gpiod_line_release(gpio_m1);
+	gpiod_line_release(gpio_m2);
+	gpiod_line_release(gpio_m3);
 
 	if (MotorBoardS[0].s == ISS_ON) {
 
@@ -626,52 +629,38 @@ int FocusRpi::SetResolution(int res)
 		switch(res)
 		{
 			case 1:	// 1:1
-				pinMode(M1, OUTPUT);
-				pinMode(M2, OUTPUT);
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
 				resolution = 1;
 				break;
 			case 2:	// 1:2
-				pinMode(M1, OUTPUT);
-				pinMode(M2, OUTPUT);
-				digitalWrite(M1, HIGH);
-				digitalWrite(M2, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
 				resolution = 2;
 				break;
 			case 3:	// 1:4
-				pinMode(M1, INPUT);
-				pinMode(M2, OUTPUT);
-				pullUpDnControl(M1, PUD_OFF);
-				digitalWrite(M2, LOW);
+				gpiod_line_request_output_flags(gpio_m1, getDefaultName(), GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
 				resolution = 4;
 				break;
 			case 4:	// 1:8
-				pinMode(M1, OUTPUT);
-				pinMode(M2, OUTPUT);
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, HIGH);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
 				resolution = 8;
 				break;
 			case 5:	// 1:16
-				pinMode(M1, OUTPUT);
-				pinMode(M2, OUTPUT);
-				digitalWrite(M1, HIGH);
-				digitalWrite(M2, HIGH);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
 				resolution = 16;
 				break;
 			case 6:	// 1:32
-				pinMode(M1, INPUT);
-				pinMode(M2, OUTPUT);
-				pullUpDnControl(M1, PUD_OFF);
-				digitalWrite(M2, HIGH);
+				gpiod_line_request_output_flags(gpio_m1, getDefaultName(), GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
 				resolution = 32;
 				break;
 			default:	// 1:1
-				pinMode(M1, OUTPUT);
-				pinMode(M2, OUTPUT);
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
 				resolution = 1;
 				break;
 		}
@@ -687,46 +676,42 @@ int FocusRpi::SetResolution(int res)
 		* 5) 1/16  - M1=1 M2=1 M3=1
 		*/
 
-		pinMode(M1, OUTPUT);
-		pinMode(M2, OUTPUT);
-		pinMode(M3, OUTPUT);
-
 		switch(res)
 		{
 			case 1:	// 1:1
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, LOW);
-				digitalWrite(M3, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 0);
 				resolution = 1;
 				break;
 			case 2:	// 1:2
-				digitalWrite(M1, HIGH);
-				digitalWrite(M2, LOW);
-				digitalWrite(M3, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 0);
 				resolution = 2;
 				break;
 			case 3:	// 1:4
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, HIGH);
-				digitalWrite(M3, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 0);
 				resolution = 4;
 				break;
 			case 4:	// 1:8
-				digitalWrite(M1, HIGH);
-				digitalWrite(M2, HIGH);
-				digitalWrite(M3, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 0);
 				resolution = 8;
 				break;
 			case 5:	// 1:16
-				digitalWrite(M1, HIGH);
-				digitalWrite(M2, HIGH);
-				digitalWrite(M3, HIGH);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 1);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 1);
 				resolution = 16;
 				break;
 			default:	// 1:1
-				digitalWrite(M1, LOW);
-				digitalWrite(M2, LOW);
-				digitalWrite(M3, LOW);
+				gpiod_line_request_output(gpio_m1, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m2, getDefaultName(), 0);
+				gpiod_line_request_output(gpio_m3, getDefaultName(), 0);
 				resolution = 1;
 				break;
 		}
@@ -735,7 +720,7 @@ int FocusRpi::SetResolution(int res)
 	return resolution;
 }
 
-bool FocusRpi::ReverseFocuser(bool enabled)
+bool AstroberryFocuser::ReverseFocuser(bool enabled)
 {
 	if (enabled)
 	{
@@ -746,16 +731,18 @@ bool FocusRpi::ReverseFocuser(bool enabled)
     return true;
 }
 
-int FocusRpi::regPosition(int pos)
+int AstroberryFocuser::regPosition(int pos)
 {
 	FILE * pFile;
     char posFileName[MAXRBUF];
 	char buf [100];
 
     if (getenv("INDICONFIG"))
+    {
         snprintf(posFileName, MAXRBUF, "%s.position", getenv("INDICONFIG"));
-    else
+    } else {
         snprintf(posFileName, MAXRBUF, "%s/.indi/%s.position", getenv("HOME"), getDeviceName());
+	}
 
 
 	if (pos == -1)

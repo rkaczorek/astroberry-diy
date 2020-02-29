@@ -1,3 +1,9 @@
+v1.2.5
+* WiringPi dependency removed - from now on only libgpiod low level library is supported
+  - update: README
+  - update: CMakeLists.txt
+  - update: splitting relays from system info
+
 v1.2.4
 * Resolution setting fixed
 

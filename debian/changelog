@@ -1,3 +1,10 @@
+indi-astroberry-diy (2.5) UNRELEASED; urgency=medium
+
+  * Migratig low level control to libgpiod
+  * Splitting relays from system info
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Fri, 28 Feb 2020 17:59:18 +0100
+
 indi-astroberry-diy (2.4) buster; urgency=medium
 
   * Fixing resolution setting (closes: #10)

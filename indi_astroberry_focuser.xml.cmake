@@ -2,7 +2,7 @@
 <driversList>
 <devGroup group="Focusers">
 	<device label="Astroberry Focuser">
-		<driver name="Astroberry Focuser">indi_rpifocus</driver>
+		<driver name="Astroberry Focuser">indi_astroberry_focuser</driver>
 		<version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
 	</device>
 </devGroup>

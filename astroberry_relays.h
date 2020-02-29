@@ -16,8 +16,8 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#ifndef RPIBRD_H
-#define RPIBRD_H
+#ifndef ASTROBERRYRELAYS_H
+#define ASTROBERRYRELAYS_H
 
 #include <string.h>
 #include <iostream>
@@ -25,34 +25,12 @@
 
 #include <defaultdevice.h>
 
-class IndiRpibrd : public INDI::DefaultDevice
+class IndiAstroberryRelays : public INDI::DefaultDevice
 {
-protected:
-private:
-	int counter;
-    IText SysTimeT[2];
-    ITextVectorProperty SysTimeTP;
-    IText SysInfoT[6];
-    ITextVectorProperty SysInfoTP;
-	ISwitch Switch0S[2];
-	ISwitchVectorProperty Switch0SP;
-	ISwitch Switch1S[2];
-	ISwitchVectorProperty Switch1SP;
-	ISwitch Switch2S[2];
-	ISwitchVectorProperty Switch2SP;
-	ISwitch Switch3S[2];
-	ISwitchVectorProperty Switch3SP;
-	ISwitch Switch4S[2];
-	ISwitchVectorProperty Switch4SP;
 public:
-    IndiRpibrd();
-	virtual ~IndiRpibrd();
-
+	IndiAstroberryRelays();
+	virtual ~IndiAstroberryRelays();
 	virtual const char *getDefaultName();
-
-	virtual void TimerHit();
-	virtual bool Connect();
-	virtual bool Disconnect();
 	virtual bool initProperties();
 	virtual bool updateProperties();
 	virtual void ISGetProperties(const char *dev);
@@ -61,10 +39,28 @@ public:
 	virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
 	virtual bool ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n);
 	virtual bool ISSnoopDevice(XMLEle *root);
+protected:
 	virtual bool saveConfigItems(FILE *fp);
-	
+private:
+	virtual bool Connect();
+	virtual bool Disconnect();
 	virtual bool LoadLines();
+	ISwitch Switch1S[2];
+	ISwitchVectorProperty Switch1SP;
+	ISwitch Switch2S[2];
+	ISwitchVectorProperty Switch2SP;
+	ISwitch Switch3S[2];
+	ISwitchVectorProperty Switch3SP;
+	ISwitch Switch4S[2];
+	ISwitchVectorProperty Switch4SP;
 
+	int counter;
+
+	struct gpiod_chip *chip;
+	struct gpiod_line *gpio_relay1;
+	struct gpiod_line *gpio_relay2;
+	struct gpiod_line *gpio_relay3;
+	struct gpiod_line *gpio_relay4;
 };
 
 #endif
