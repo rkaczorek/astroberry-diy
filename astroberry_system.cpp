@@ -164,7 +164,11 @@ bool IndiAstroberrySystem::initProperties()
 	char buffer[128];
 
 	//update Hardware
-	IUSaveText(&SysInfoT[0], getHardwareRev());
+        pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
+        fgets(buffer, 128, pipe);
+        pclose(pipe);
+        IUSaveText(&SysInfoT[0], buffer);
+	//IUSaveText(&SysInfoT[0], getHardwareRev());
 
 	//update Hostname
 	pipe = popen("hostname", "r");
@@ -231,6 +235,7 @@ bool IndiAstroberrySystem::ISSnoopDevice(XMLEle *root)
 {
     return INDI::DefaultDevice::ISSnoopDevice(root);
 }
+/*
 const char * IndiAstroberrySystem::getHardwareRev()
 {
 	FILE* pipe;
@@ -307,3 +312,4 @@ const char * IndiAstroberrySystem::getHardwareRev()
 			break;
 	}
 }
+*/

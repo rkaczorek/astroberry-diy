@@ -44,7 +44,7 @@ protected:
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	virtual const char *getHardwareRev();
+	//virtual const char *getHardwareRev();
 
 	IText SysTimeT[2];
 	ITextVectorProperty SysTimeTP;
