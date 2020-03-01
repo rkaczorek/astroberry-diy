@@ -2,6 +2,7 @@ indi-astroberry-diy (2.5) UNRELEASED; urgency=medium
 
   * Migratig low level control to libgpiod
   * Splitting relays from system info
+  * Adding BCM pins configuration from UI
 
  -- Radek Kaczorek <rkaczorek@gmail.com>  Fri, 28 Feb 2020 17:59:18 +0100
 

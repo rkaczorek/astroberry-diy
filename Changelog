@@ -3,6 +3,7 @@ v1.2.5
   - update: README
   - update: CMakeLists.txt
   - update: splitting relays from system info
+  - add: BCM pins configuration
 
 v1.2.4
 * Resolution setting fixed
