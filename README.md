@@ -53,23 +53,23 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
 1. Astroberry Focuser
 * Stepper motor
 * Stepper motor controller - DRV8834 and A4988 are supported
-  Motor controller to Raspberry Pi wiring:
-   - GPIO04 / PIN7 - DIR
-   - GPIO17 / PIN11 - STEP
-   - GPIO22 / PIN15 - M1 or M0
-   - GPIO27 / PIN13 - M2 or M1
-   - GPIO24 / PIN18 - M3
-   - GPIO23 / PIN16 - SLEEP + RST
+  Default Motor Controller to Raspberry Pi wiring. Starting from version 2.5 you can set your own BCM Pins on Options Tab!
+   - BCM04 / PIN7 - DIR
+   - BCM17 / PIN11 - STEP
+   - BCM22 / PIN15 - M1 or M0
+   - BCM27 / PIN13 - M2 or M1
+   - BCM24 / PIN18 - M3
+   - BCM23 / PIN16 - SLEEP + RST
 
    Note: Make sure you connect the stepper motor correctly to the controller (B2, B1 and A2, A1 pins on the controller).
          Remember to protect the power line connected to VMOT of the motor controller with 100uF capacitor.
 
 2. Astroberry Relays
 * Relay switch board eg. YwRobot 4 relay
-  Four IN pins, each switching ON/OFF a relay:
-   - GPIO05 / PIN29 - IN1
-   - GPIO06 / PIN31 - IN2
-   - GPIO13 / PIN33 - IN3
-   - GPIO19 / PIN35 - IN4
+  Default pins, each switching ON/OFF a relay (active-low). Starting from version 2.5 you can set your own BCM Pins on Options Tab!
+   - BCM05 / PIN29 - IN1
+   - BCM06 / PIN31 - IN2
+   - BCM13 / PIN33 - IN3
+   - BCM19 / PIN35 - IN4
 
    Note: All inputs are set to HIGH by default. Most relay boards require input to be LOW to swich ON a line.
