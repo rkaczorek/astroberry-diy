@@ -33,15 +33,6 @@ std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 // create millisecond sleep macro
 #define msleep(milliseconds) usleep(milliseconds * 1000)
 
-// DO NOT USE pin numbers!
-// BCM numbers ONLY
-#define DIR 4 // PIN7
-#define STEP 17 // PIN11
-#define M1 22 // PIN15
-#define M2 27 // PIN13
-#define M3 24 // PIN18
-#define SLEEP 23 // PIN16
-
 /*
  Maximum resolution switch
  1 - 1/1
@@ -121,7 +112,9 @@ AstroberryFocuser::AstroberryFocuser()
 
 AstroberryFocuser::~AstroberryFocuser()
 {
-
+	// Delete BCM Pins options
+	deleteProperty(MotorBoardSP.name);
+	deleteProperty(BCMpinsNP.name);
 }
 
 const char * AstroberryFocuser::getDefaultName()
@@ -139,12 +132,12 @@ bool AstroberryFocuser::Connect()
 	}
 
 	// Select gpios
-	gpio_dir = gpiod_chip_get_line(chip, DIR);
-	gpio_step = gpiod_chip_get_line(chip, STEP);
-	gpio_sleep = gpiod_chip_get_line(chip, SLEEP);
-	gpio_m1 = gpiod_chip_get_line(chip, M1);
-	gpio_m2 = gpiod_chip_get_line(chip, M2);
-	gpio_m3 = gpiod_chip_get_line(chip, M3);
+	gpio_dir = gpiod_chip_get_line(chip, BCMpinsN[0].value);
+	gpio_step = gpiod_chip_get_line(chip, BCMpinsN[1].value);
+	gpio_sleep = gpiod_chip_get_line(chip, BCMpinsN[2].value);
+	gpio_m1 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
+	gpio_m2 = gpiod_chip_get_line(chip, BCMpinsN[4].value);
+	gpio_m3 = gpiod_chip_get_line(chip, BCMpinsN[5].value);
 
 	// Set initial gpios direction and default states
 	gpiod_line_request_output(gpio_dir, getDefaultName(), 0);
@@ -152,13 +145,21 @@ bool AstroberryFocuser::Connect()
 	gpiod_line_request_output(gpio_sleep, getDefaultName(), 1);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
-	FocusAbsPosN[0].value = regPosition(-1) != -1 ? (int) regPosition(-1) * SetResolution(FocusResolutionN[0].value) / SetResolution(MAX_RESOLUTION) : 0;
+	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) * SetResolution(FocusResolutionN[0].value) / SetResolution(MAX_RESOLUTION) : 0;
 
 	// preset resolution
 	SetResolution(FocusResolutionN[0].value);
 
 	// set motor standby timer
 	timerID = SetTimer(60 * 1000 * MotorStandbyN[0].value);
+
+	// Lock Motor Board setting
+	MotorBoardSP.s=IPS_BUSY;
+	IDSetSwitch(&MotorBoardSP, nullptr);
+
+	// Lock BCM Pins setting
+	BCMpinsNP.s=IPS_BUSY;
+	IDSetNumber(&BCMpinsNP, nullptr);
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
 
@@ -170,6 +171,14 @@ bool AstroberryFocuser::Disconnect()
 	// Close device
 	gpiod_chip_close(chip);
 
+	// Unlock Motor Board setting
+	MotorBoardSP.s=IPS_IDLE;
+	IDSetSwitch(&MotorBoardSP, nullptr);
+
+	// Unlock BCM Pins setting
+	BCMpinsNP.s=IPS_IDLE;
+	IDSetNumber(&BCMpinsNP, nullptr);
+
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
 
     return true;
@@ -179,6 +188,18 @@ bool AstroberryFocuser::initProperties()
 {
     INDI::Focuser::initProperties();
 
+	IUFillSwitch(&MotorBoardS[0],"DRV8834","DRV8834",ISS_ON);
+	IUFillSwitch(&MotorBoardS[1],"A4988","A4988",ISS_OFF);
+	IUFillSwitchVector(&MotorBoardSP,MotorBoardS,2,getDeviceName(),"MOTOR_BOARD","Control Board",OPTIONS_TAB,IP_RW,ISR_1OFMANY,0,IPS_IDLE);
+
+	IUFillNumber(&BCMpinsN[0], "BCMPIN01", "DIR", "%0.0f", 1, 27, 0, 4); // BCM4 = PIN7
+	IUFillNumber(&BCMpinsN[1], "BCMPIN02", "STEP", "%0.0f", 1, 27, 0, 17); // BCM17 = PIN11
+	IUFillNumber(&BCMpinsN[2], "BCMPIN03", "SLEEP", "%0.0f", 1, 27, 0, 23); // BCM23 = PIN16
+	IUFillNumber(&BCMpinsN[3], "BCMPIN04", "M1", "%0.0f", 1, 27, 0, 22); // BCM22 = PIN15
+	IUFillNumber(&BCMpinsN[4], "BCMPIN05", "M2", "%0.0f", 1, 27, 0, 27); // BCM27 = PIN13
+	IUFillNumber(&BCMpinsN[5], "BCMPIN06", "M3", "%0.0f", 1, 27, 0, 24); // BCM24 = PIN18
+	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 6, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
 	IUFillNumber(&FocusBacklashN[0], "FOCUS_BACKLASH_VALUE", "steps", "%0.0f", 0, 1000, 10, 0);
 	IUFillNumberVector(&FocusBacklashNP, FocusBacklashN, 1, getDeviceName(), "FOCUS_BACKLASH", "Backlash", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
@@ -187,10 +208,6 @@ bool AstroberryFocuser::initProperties()
 
 	IUFillNumber(&FocusStepDelayN[0], "FOCUS_STEPDELAY_VALUE", "milliseconds", "%0.0f", 1, 10, 1, 1);
 	IUFillNumberVector(&FocusStepDelayNP, FocusStepDelayN, 1, getDeviceName(), "FOCUS_STEPDELAY", "Step Delay", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
-
-	IUFillSwitch(&MotorBoardS[0],"DRV8834","DRV8834",ISS_ON);
-	IUFillSwitch(&MotorBoardS[1],"A4988","A4988",ISS_OFF);
-	IUFillSwitchVector(&MotorBoardSP,MotorBoardS,2,getDeviceName(),"MOTOR_BOARD","Control Board",OPTIONS_TAB,IP_RW,ISR_1OFMANY,60,IPS_IDLE);
 
 	IUFillNumber(&MotorStandbyN[0], "MOTOR_STANDBY_TIME", "minutes", "%0.0f", 0, 10, 1, 1);
 	IUFillNumberVector(&MotorStandbyNP, MotorStandbyN, 1, getDeviceName(), "MOTOR_SLEEP", "Standby", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
@@ -208,11 +225,16 @@ bool AstroberryFocuser::initProperties()
 	FocusAbsPosN[0].min = 0;
 	FocusAbsPosN[0].max = FocusMaxPosN[0].value;
 	FocusAbsPosN[0].step = (int) FocusAbsPosN[0].max / 100;
-//	FocusAbsPosN[0].value = regPosition(-1) != -1 ? regPosition(-1) * SetResolution(FocusResolutionN[0].value) : 0; //read last position from file
+//	FocusAbsPosN[0].value = savePosition(-1) != -1 ? savePosition(-1) * SetResolution(FocusResolutionN[0].value) : 0; //read last position from file
 
 	FocusMotionS[FOCUS_OUTWARD].s = ISS_ON;
 	FocusMotionS[FOCUS_INWARD].s = ISS_OFF;
 	IDSetSwitch(&FocusMotionSP, nullptr);
+
+	// Load BCM Pins
+	defineSwitch(&MotorBoardSP);
+	defineNumber(&BCMpinsNP);	
+	loadConfig();
 
     return true;
 }
@@ -226,20 +248,17 @@ void AstroberryFocuser::ISGetProperties (const char *dev)
 
 bool AstroberryFocuser::updateProperties()
 {
-
     INDI::Focuser::updateProperties();
 
     if (isConnected())
     {
 		defineSwitch(&FocusMotionSP);
-		defineSwitch(&MotorBoardSP);
 		defineNumber(&MotorStandbyNP);
 		defineNumber(&FocusBacklashNP);
 		defineNumber(&FocusStepDelayNP);
 		defineNumber(&FocusResolutionNP);
     } else {
 		deleteProperty(FocusMotionSP.name);
-		deleteProperty(MotorBoardSP.name);
 		deleteProperty(MotorStandbyNP.name);
 		deleteProperty(FocusBacklashNP.name);
 		deleteProperty(FocusStepDelayNP.name);
@@ -254,6 +273,39 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 	// first we check if it's for our device
 	if(strcmp(dev,getDeviceName())==0)
 	{
+        // handle BCMpins
+        if (!strcmp(name, BCMpinsNP.name))
+        {
+			if (isConnected())
+			{
+				DEBUG(INDI::Logger::DBG_WARNING, "Cannot set BCM Pins while device is connected.");
+				return false;
+			} else {
+
+				IUUpdateNumber(&BCMpinsNP,values,names,n);
+
+				// Verify unique BCM Pin assignement
+				for (unsigned int i = 0; i < 6; i++)
+				{
+					for (unsigned j = i + 1; j < 6; j++)
+					{					
+						if ( BCMpinsN[i].value == BCMpinsN[j].value )
+						{
+							BCMpinsNP.s=IPS_ALERT;
+							IDSetNumber(&BCMpinsNP, nullptr);
+							DEBUG(INDI::Logger::DBG_WARNING, "Astroberry Focuser BCM Pins Error. You cannot assign the same BCM Pin twice!");
+							return false;
+						}
+					}
+					// verify BCM Pins conflict - TODO
+				}
+
+				BCMpinsNP.s=IPS_OK;
+				IDSetNumber(&BCMpinsNP, nullptr);
+				DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Focuser BCM Pins set to DIR: BCM%0.0f, STEP: BCM%0.0f, SLEEP: BCM%0.0f, M1: BCM%0.0f, M2: BCM%0.0f, M3: BCM%0.0f", BCMpinsN[0].value, BCMpinsN[1].value, BCMpinsN[2].value, BCMpinsN[3].value, BCMpinsN[4].value, BCMpinsN[5].value);
+				return true;
+			}
+        }
 
         // handle focus absolute position
         if (!strcmp(name, FocusAbsPosNP.name))
@@ -417,31 +469,36 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
         // handle motor board
         if(!strcmp(name, MotorBoardSP.name))
         {
-			IUUpdateSwitch(&MotorBoardSP, states, names, n);
-			MotorBoardSP.s = IPS_BUSY;
-			IDSetSwitch(&MotorBoardSP, nullptr);
-
-
-			// set max resolution for motor model
-			if ( MotorBoardS[0].s == ISS_ON)
+			if (isConnected())
 			{
-				FocusResolutionN[0].max = MAX_RESOLUTION;
-				DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser control board set to DRV8834");
-			}
-			if ( MotorBoardS[1].s == ISS_ON)
-			{
-				if ( FocusResolutionN[0].value > 5 )
-					FocusResolutionN[0].value = 5;
-				FocusResolutionN[0].max = MAX_RESOLUTION;
-				DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser control board set to A4988");
-			}
-			IDSetNumber(&FocusResolutionNP, nullptr);
-			deleteProperty(FocusResolutionNP.name);
-			defineNumber(&FocusResolutionNP);
+				DEBUG(INDI::Logger::DBG_WARNING, "Cannot set Control Board while device is connected.");
+				return false;
+			} else {
+				IUUpdateSwitch(&MotorBoardSP, states, names, n);
+				MotorBoardSP.s = IPS_BUSY;
+				IDSetSwitch(&MotorBoardSP, nullptr);
 
-			MotorBoardSP.s = IPS_OK;
-			IDSetSwitch(&MotorBoardSP, nullptr);
-			return true;
+				// set max resolution for motor model
+				if ( MotorBoardS[0].s == ISS_ON)
+				{
+					FocusResolutionN[0].max = MAX_RESOLUTION;
+					DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser Control Board set to DRV8834");
+				}
+				if ( MotorBoardS[1].s == ISS_ON)
+				{
+					if ( FocusResolutionN[0].value > 5 )
+						FocusResolutionN[0].value = 5;
+					FocusResolutionN[0].max = MAX_RESOLUTION;
+					DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser Control Board set to A4988");
+				}
+				IDSetNumber(&FocusResolutionNP, nullptr);
+				updateProperties();
+				//defineNumber(&FocusResolutionNP);
+
+				MotorBoardSP.s = IPS_OK;
+				IDSetSwitch(&MotorBoardSP, nullptr);
+				return true;
+			}
 		}
     }
     return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
@@ -454,10 +511,11 @@ bool AstroberryFocuser::ISSnoopDevice (XMLEle *root)
 
 bool AstroberryFocuser::saveConfigItems(FILE *fp)
 {
+    IUSaveConfigSwitch(fp, &MotorBoardSP);
+	IUSaveConfigNumber(fp, &BCMpinsNP);
     IUSaveConfigNumber(fp, &FocusMaxPosNP);
     IUSaveConfigNumber(fp, &PresetNP);
     IUSaveConfigSwitch(fp, &FocusReverseSP);
-    IUSaveConfigSwitch(fp, &MotorBoardSP);
     IUSaveConfigNumber(fp, &MotorStandbyNP);
     IUSaveConfigNumber(fp, &FocusBacklashNP);
     IUSaveConfigNumber(fp, &FocusStepDelayNP);
@@ -545,7 +603,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     // if direction changed do backlash adjustment
     if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
     {
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser BACKLASH compensation by %0.0f steps", FocusBacklashN[0].value);
+		DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Focuser backlash compensation by %0.0f steps", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
@@ -587,7 +645,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     }
 
 	//save position to file
-	regPosition((int) FocusAbsPosN[0].value * SetResolution(MAX_RESOLUTION) / SetResolution(FocusResolutionN[0].value)); // always save at MAX_RESOLUTION
+	savePosition((int) FocusAbsPosN[0].value * SetResolution(MAX_RESOLUTION) / SetResolution(FocusResolutionN[0].value)); // always save at MAX_RESOLUTION
 
     // update abspos value and status
     DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Focuser at the position %0.0f", FocusAbsPosN[0].value);
@@ -724,14 +782,14 @@ bool AstroberryFocuser::ReverseFocuser(bool enabled)
 {
 	if (enabled)
 	{
-		DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser reverse direction ENABLED");
+		DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser reverse direction ENABLED");
 	} else {
-		DEBUG(INDI::Logger::DBG_DEBUG, "Astroberry Focuser reverse direction DISABLED");
+		DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser reverse direction DISABLED");
 	}
     return true;
 }
 
-int AstroberryFocuser::regPosition(int pos)
+int AstroberryFocuser::savePosition(int pos)
 {
 	FILE * pFile;
     char posFileName[MAXRBUF];

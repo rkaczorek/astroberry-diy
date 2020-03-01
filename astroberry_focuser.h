@@ -45,8 +45,10 @@ private:
 	virtual bool Connect();
 	virtual bool Disconnect();
 	virtual int SetResolution(int speed);
-	virtual int regPosition(int pos);
+	virtual int savePosition(int pos);
 
+	INumber BCMpinsN[6];
+	INumberVectorProperty BCMpinsNP;
 	INumber FocusBacklashN[1];
 	INumberVectorProperty FocusBacklashNP;
 	INumber FocusResolutionN[1];

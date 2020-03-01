@@ -44,7 +44,8 @@ protected:
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	virtual bool LoadLines();
+	INumber BCMpinsN[4];
+	INumberVectorProperty BCMpinsNP;
 	ISwitch Switch1S[2];
 	ISwitchVectorProperty Switch1SP;
 	ISwitch Switch2S[2];

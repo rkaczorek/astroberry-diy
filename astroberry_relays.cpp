@@ -28,14 +28,6 @@
 // We declare an auto pointer to IndiAstroberryRelays
 std::unique_ptr<IndiAstroberryRelays> indiAstroberryRelays(new IndiAstroberryRelays());
 
-// DO NOT USE pin numbers!
-// BCM numbers ONLY
-#define RELAY1 5 // PIN29
-#define RELAY2 6 // PIN31
-#define RELAY3 13 // PIN33
-#define RELAY4 19 // PIN35
-
-
 void ISPoll(void *p);
 
 void ISInit()
@@ -92,21 +84,24 @@ IndiAstroberryRelays::IndiAstroberryRelays()
 }
 IndiAstroberryRelays::~IndiAstroberryRelays()
 {
+	// Delete BCM Pins options
+	deleteProperty(BCMpinsNP.name);
 }
 bool IndiAstroberryRelays::Connect()
 {
+	// Init GPIO
 	chip = gpiod_chip_open("/dev/gpiochip0");
 	if (!chip)
-        {
-                DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Relays.");
-                return false;
-        }
+	{
+		DEBUG(INDI::Logger::DBG_SESSION, "Problem initiating Astroberry Relays.");
+		return false;
+	}
 
 	// Select gpios
-	gpio_relay1 = gpiod_chip_get_line(chip, RELAY1);
-	gpio_relay2 = gpiod_chip_get_line(chip, RELAY2);
-	gpio_relay3 = gpiod_chip_get_line(chip, RELAY3);
-	gpio_relay4 = gpiod_chip_get_line(chip, RELAY4);
+	gpio_relay1 = gpiod_chip_get_line(chip, BCMpinsN[0].value);
+	gpio_relay2 = gpiod_chip_get_line(chip, BCMpinsN[1].value);
+	gpio_relay3 = gpiod_chip_get_line(chip, BCMpinsN[2].value);
+	gpio_relay4 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
 
 	// Set initial gpios direction and default states
 	gpiod_line_request_output(gpio_relay1, getDefaultName(), 1);
@@ -114,22 +109,23 @@ bool IndiAstroberryRelays::Connect()
 	gpiod_line_request_output(gpio_relay3, getDefaultName(), 1);
 	gpiod_line_request_output(gpio_relay4, getDefaultName(), 1);
 
-/*
-	if ( !IndiAstroberryRelays::LoadLines() )
-	{
-		IDMessage(getDeviceName(), "Astroberry Relays connection error.");
-		return false;
-	}
-*/
-	IDMessage(getDeviceName(), "Astroberry Relays connected successfully.");
+	// Lock BCM Pins setting
+	BCMpinsNP.s=IPS_BUSY;
+	IDSetNumber(&BCMpinsNP, nullptr);
+
+	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays connected successfully.");
 	return true;
 }
 bool IndiAstroberryRelays::Disconnect()
 {
-	// Close device
+	// Close GPIO
 	gpiod_chip_close(chip);
 
-	IDMessage(getDeviceName(), "Astroberry Relays disconnected successfully.");
+	// Unlock BCM Pins setting
+	BCMpinsNP.s=IPS_IDLE;
+	IDSetNumber(&BCMpinsNP, nullptr);
+
+	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays disconnected successfully.");
 	return true;
 }
 const char * IndiAstroberryRelays::getDefaultName()
@@ -156,6 +152,16 @@ bool IndiAstroberryRelays::initProperties()
     IUFillSwitch(&Switch4S[0], "SW4ON", "ON", ISS_OFF);
     IUFillSwitch(&Switch4S[1], "SW4OFF", "OFF", ISS_ON);
     IUFillSwitchVector(&Switch4SP, Switch4S, 2, getDeviceName(), "SWITCH_4", "Relay 4", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+	IUFillNumber(&BCMpinsN[0], "BCMPIN01", "Relay 1", "%0.0f", 1, 27, 0, 5); // BCM5 = PIN29
+	IUFillNumber(&BCMpinsN[1], "BCMPIN02", "Relay 2", "%0.0f", 1, 27, 0, 6); // BCM6 = PIN31
+	IUFillNumber(&BCMpinsN[2], "BCMPIN03", "Relay 3", "%0.0f", 1, 27, 0, 13); // BCM13 = PIN33
+	IUFillNumber(&BCMpinsN[3], "BCMPIN04", "Relay 4", "%0.0f", 1, 27, 0, 19); // BCM19 = PIN35
+	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 4, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+	// Load BCM Pins
+	defineNumber(&BCMpinsNP);	
+	loadConfig();
 
     return true;
 }
@@ -187,6 +193,45 @@ void IndiAstroberryRelays::ISGetProperties(const char *dev)
 }
 bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
+	// first we check if it's for our device
+	if(strcmp(dev,getDeviceName())==0)
+	{
+
+        // handle BCMpins
+        if (!strcmp(name, BCMpinsNP.name))
+        {
+			if (isConnected())
+			{
+				DEBUG(INDI::Logger::DBG_SESSION, "Cannot set BCM Pins while device is connected.");
+				return false;
+			} else {
+
+				IUUpdateNumber(&BCMpinsNP,values,names,n);
+
+				// Verify unique BCM Pin assignement
+				for (unsigned int i = 0; i < 4; i++)
+				{
+					for (unsigned j = i + 1; j < 4; j++)
+					{					
+						if ( BCMpinsN[i].value == BCMpinsN[j].value )
+						{
+							BCMpinsNP.s=IPS_ALERT;
+							IDSetNumber(&BCMpinsNP, nullptr);
+							DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays BCM Pins Error. You cannot assign the same BCM Pin twice!");
+							return false;
+						}
+					}
+					// verify BCM Pins conflict - TODO
+				}
+
+				BCMpinsNP.s=IPS_OK;
+				IDSetNumber(&BCMpinsNP, nullptr);
+				DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Relays BCM Pins set to Relay1: BCM%0.0f, Relay2: BCM%0.0f, Relay3: BCM%0.0f, Relay4: BCM%0.0f", BCMpinsN[0].value, BCMpinsN[1].value, BCMpinsN[2].value, BCMpinsN[3].value);
+				return true;
+			}
+        }
+	}
+
 	return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
 }
 bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -202,7 +247,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch1S[0].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay1, 0);
-				IDMessage(getDeviceName(), "Astroberry Relays #1 set to ON");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #1 set to ON");
 				Switch1SP.s = IPS_OK;
 				Switch1S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch1SP, NULL);
@@ -211,7 +256,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch1S[1].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay1, 1);
-				IDMessage(getDeviceName(), "Astroberry Relays #1 set to OFF");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #1 set to OFF");
 				Switch1SP.s = IPS_IDLE;
 				Switch1S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch1SP, NULL);
@@ -227,7 +272,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch2S[0].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay2, 0);
-				IDMessage(getDeviceName(), "Astroberry Relays #2 set to ON");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #2 set to ON");
 				Switch2SP.s = IPS_OK;
 				Switch2S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch2SP, NULL);
@@ -236,7 +281,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch2S[1].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay2, 1);
-				IDMessage(getDeviceName(), "Astroberry Relays #2 set to OFF");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #2 set to OFF");
 				Switch2SP.s = IPS_IDLE;
 				Switch2S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch2SP, NULL);
@@ -252,7 +297,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch3S[0].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay3, 0);
-				IDMessage(getDeviceName(), "Astroberry Relays #3 set to ON");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #3 set to ON");
 				Switch3SP.s = IPS_OK;
 				Switch3S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch3SP, NULL);
@@ -261,7 +306,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch3S[1].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay3, 1);
-				IDMessage(getDeviceName(), "Astroberry Relays #3 set to OFF");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #3 set to OFF");
 				Switch3SP.s = IPS_IDLE;
 				Switch3S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch3SP, NULL);
@@ -277,7 +322,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch4S[0].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay4, 0);
-				IDMessage(getDeviceName(), "Astroberry Relays #4 set to ON");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #4 set to ON");
 				Switch4SP.s = IPS_OK;
 				Switch4S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch4SP, NULL);
@@ -286,7 +331,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			if ( Switch4S[1].s == ISS_ON )
 			{
 				gpiod_line_set_value(gpio_relay4, 1);
-				IDMessage(getDeviceName(), "Astroberry Relays #4 set to OFF");
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #4 set to OFF");
 				Switch4SP.s = IPS_IDLE;
 				Switch4S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch4SP, NULL);
@@ -310,79 +355,11 @@ bool IndiAstroberryRelays::ISSnoopDevice(XMLEle *root)
 }
 bool IndiAstroberryRelays::saveConfigItems(FILE *fp)
 {
+	IUSaveConfigNumber(fp, &BCMpinsNP);
 	IUSaveConfigSwitch(fp, &Switch1SP);
 	IUSaveConfigSwitch(fp, &Switch2SP);
 	IUSaveConfigSwitch(fp, &Switch3SP);
 	IUSaveConfigSwitch(fp, &Switch4SP);
 
-    //controller->saveConfigItems(fp);
-
     return true;
-}
-bool IndiAstroberryRelays::LoadLines()
-{
-	// load line 1 state
-	if ( gpiod_line_get_value(gpio_relay1) == 0 )
-	{
-		Switch1S[0].s = ISS_ON;
-		Switch1S[1].s = ISS_OFF;
-		Switch1SP.s = IPS_OK;
-		IDSetSwitch(&Switch1SP, NULL);
-	}
-	else
-	{
-		Switch1S[0].s = ISS_OFF;
-		Switch1S[1].s = ISS_ON;
-		Switch1SP.s = IPS_IDLE;
-		IDSetSwitch(&Switch1SP, NULL);
-	}
-
-	// load line 2 state
-	if ( gpiod_line_get_value(gpio_relay2) == 0 )
-	{
-		Switch2S[0].s = ISS_ON;
-		Switch2S[1].s = ISS_OFF;
-		Switch2SP.s = IPS_OK;
-		IDSetSwitch(&Switch2SP, NULL);
-	}
-	else
-	{
-		Switch2S[0].s = ISS_OFF;
-		Switch2S[1].s = ISS_ON;
-		Switch2SP.s = IPS_IDLE;
-		IDSetSwitch(&Switch2SP, NULL);
-	}
-
-	// load line 3 state
-	if ( gpiod_line_get_value(gpio_relay3) == 0 )
-	{
-		Switch3S[0].s = ISS_ON;
-		Switch3S[1].s = ISS_OFF;
-		Switch3SP.s = IPS_OK;
-		IDSetSwitch(&Switch3SP, NULL);
-	}
-	else
-	{
-		Switch3S[0].s = ISS_OFF;
-		Switch3S[1].s = ISS_ON;
-		Switch3SP.s = IPS_IDLE;
-		IDSetSwitch(&Switch3SP, NULL);
-	}
-
-	// load line 4 state
-	if ( gpiod_line_get_value(gpio_relay4) == 0 )
-	{
-		Switch4S[0].s = ISS_ON;
-		Switch4S[1].s = ISS_OFF;
-		Switch4SP.s = IPS_OK;
-		IDSetSwitch(&Switch4SP, NULL);
-	}
-	else
-	{
-		Switch4S[0].s = ISS_OFF;
-		Switch4S[1].s = ISS_ON;
-		Switch4SP.s = IPS_IDLE;
-		IDSetSwitch(&Switch4SP, NULL);
-	}
-	return true;
 }
