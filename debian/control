@@ -10,7 +10,8 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libindi1
 Description: INDI Driver for Astroberry DIY devices
  Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus
- Astroberry Board - power switch board allowing for remote powering on/off up to 4 devices and monitor system parameters
+ Astroberry Relays - relays switch board allowing for remote switching up to 4 devices
+ Astroberry System - system parameters monitoring
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
 
@@ -21,7 +22,8 @@ Architecture: any
 Depends: indi-astroberry-diy (= ${binary:Version}), ${misc:Depends}
 Description: INDI Driver for Astroberry DIY devices
  Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus
- Astroberry Board - power switch board allowing for remote powering on/off up to 4 devices and monitor system parameters
+ Astroberry Relays - relays switch board allowing for remote switching up to 4 devices
+ Astroberry System - system parameters monitoring
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
 
