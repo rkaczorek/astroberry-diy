@@ -97,6 +97,17 @@ bool IndiAstroberryRelays::Connect()
 		return false;
 	}
 
+	// verify BCM Pins are not used by other consumers
+	for (unsigned int pin = 0; pin < 4; pin++)
+	{
+		if (gpiod_line_is_used(gpiod_chip_get_line(chip, BCMpinsN[pin].value)))
+		{
+			DEBUGF(INDI::Logger::DBG_ERROR, "BCM Pin %0.0f already used", BCMpinsN[pin].value);
+			gpiod_chip_close(chip);
+			return false;
+		}
+	}	
+
 	// Select gpios
 	gpio_relay1 = gpiod_chip_get_line(chip, BCMpinsN[0].value);
 	gpio_relay2 = gpiod_chip_get_line(chip, BCMpinsN[1].value);
@@ -104,10 +115,10 @@ bool IndiAstroberryRelays::Connect()
 	gpio_relay4 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
 
 	// Set initial gpios direction and default states
-	gpiod_line_request_output(gpio_relay1, getDefaultName(), 1);
-	gpiod_line_request_output(gpio_relay2, getDefaultName(), 1);
-	gpiod_line_request_output(gpio_relay3, getDefaultName(), 1);
-	gpiod_line_request_output(gpio_relay4, getDefaultName(), 1);
+	gpiod_line_request_output(gpio_relay1, "1@astroberry_relays", 1);
+	gpiod_line_request_output(gpio_relay2, "2@astroberry_relays", 1);
+	gpiod_line_request_output(gpio_relay3, "3@astroberry_relays", 1);
+	gpiod_line_request_output(gpio_relay4, "4@astroberry_relays", 1);
 
 	// Lock BCM Pins setting
 	BCMpinsNP.s=IPS_BUSY;
@@ -196,33 +207,61 @@ bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, doubl
 	// first we check if it's for our device
 	if(strcmp(dev,getDeviceName())==0)
 	{
-
         // handle BCMpins
         if (!strcmp(name, BCMpinsNP.name))
         {
+			unsigned int valcount = 4;
+
 			if (isConnected())
 			{
-				DEBUG(INDI::Logger::DBG_SESSION, "Cannot set BCM Pins while device is connected.");
+				DEBUG(INDI::Logger::DBG_WARNING, "Cannot set BCM Pins while device is connected.");
 				return false;
 			} else {
-
-				IUUpdateNumber(&BCMpinsNP,values,names,n);
-
-				// Verify unique BCM Pin assignement
-				for (unsigned int i = 0; i < 4; i++)
+				for (unsigned int i = 0; i < valcount; i++)
 				{
-					for (unsigned j = i + 1; j < 4; j++)
+					// verify a number is a valid BCM Pin
+					if ( values[i] < 1 || values[i] > 27 )
+					{
+						BCMpinsNP.s=IPS_ALERT;
+						IDSetNumber(&BCMpinsNP, nullptr);
+						DEBUGF(INDI::Logger::DBG_ERROR, "Value %0.0f is not a valid BCM Pin number!", values[i]);
+						return false;
+					}
+
+					// Verify unique BCM Pin assignement
+					for (unsigned j = i + 1; j < valcount; j++)
 					{					
-						if ( BCMpinsN[i].value == BCMpinsN[j].value )
+						if ( values[i] == values[j] )
 						{
 							BCMpinsNP.s=IPS_ALERT;
 							IDSetNumber(&BCMpinsNP, nullptr);
-							DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays BCM Pins Error. You cannot assign the same BCM Pin twice!");
+							DEBUG(INDI::Logger::DBG_ERROR, "You cannot assign the same BCM Pin twice!");
 							return false;
 						}
 					}
-					// verify BCM Pins conflict - TODO
+
+					// verify BCM Pins are not used by other consumers
+					chip = gpiod_chip_open("/dev/gpiochip0");
+					if (chip)
+					{
+						struct gpiod_line *line = gpiod_chip_get_line(chip, values[i]);
+						bool line_status = gpiod_line_is_used(line);
+						gpiod_chip_close(chip);
+
+						if (line_status)
+						{
+							BCMpinsNP.s=IPS_ALERT;
+							IDSetNumber(&BCMpinsNP, nullptr);
+							DEBUGF(INDI::Logger::DBG_ERROR, "BCM Pin %0.0f already used!", values[i]);
+							return false;
+						}
+					} else {
+						DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Relays.");
+						return false;
+					}
 				}
+
+				IUUpdateNumber(&BCMpinsNP,values,names,n);
 
 				BCMpinsNP.s=IPS_OK;
 				IDSetNumber(&BCMpinsNP, nullptr);

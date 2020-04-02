@@ -32,9 +32,12 @@ public:
 	virtual void ISGetProperties (const char *dev);
 	virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
 	virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
+	virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
 	virtual bool ISSnoopDevice(XMLEle *root);
+    static void stepperStandbyHelper(void *context);
+    static void updateTemperatureHelper(void *context);
+    static void temperatureCompensationHelper(void *context);
 protected:
-	virtual IPState MoveFocuser(FocusDirection dir, int speed, int duration);
 	virtual IPState MoveAbsFocuser(int ticks);
 	virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
 	virtual bool saveConfigItems(FILE *fp);
@@ -44,25 +47,38 @@ protected:
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	virtual int SetResolution(int speed);
+	virtual void SetResolution(int res);
 	virtual int savePosition(int pos);
+	virtual bool readDS18B20();
 
-	INumber BCMpinsN[6];
-	INumberVectorProperty BCMpinsNP;
-	INumber FocusBacklashN[1];
-	INumberVectorProperty FocusBacklashNP;
-	INumber FocusResolutionN[1];
-	INumberVectorProperty FocusResolutionNP;
-	INumber FocusStepDelayN[1];
-	INumberVectorProperty FocusStepDelayNP;
 	ISwitch MotorDirS[2];
 	ISwitchVectorProperty MotorDirSP;
+	ISwitch FocusResolutionS[6];
+	ISwitchVectorProperty FocusResolutionSP;
+	INumber FocuserInfoN[3];
+	INumberVectorProperty FocuserInfoNP;
 	ISwitch MotorBoardS[2];
 	ISwitchVectorProperty MotorBoardSP;
-	INumber MotorStandbyN[1];
-	INumberVectorProperty MotorStandbyNP;
-
-	int timerID { -1 };
+	INumber BCMpinsN[6];
+	INumberVectorProperty BCMpinsNP;
+	INumber FocusStepDelayN[1];
+	INumberVectorProperty FocusStepDelayNP;
+	INumber FocusBacklashN[1];
+	INumberVectorProperty FocusBacklashNP;
+	INumber FocuserTravelN[1];
+	INumberVectorProperty FocuserTravelNP;
+	ISwitch ResetAbsPosS[1];
+	ISwitchVectorProperty ResetAbsPosSP;
+	IText ActiveTelescopeT[1];
+	ITextVectorProperty ActiveTelescopeTP;
+	INumber ScopeParametersN[2];
+	INumberVectorProperty ScopeParametersNP;
+	INumber FocusTemperatureN[1];
+	INumberVectorProperty FocusTemperatureNP;
+    INumber TemperatureCoefN[1];
+    INumberVectorProperty TemperatureCoefNP;
+    ISwitch TemperatureCompensateS[2];
+    ISwitchVectorProperty TemperatureCompensateSP;
 
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_dir;
@@ -71,6 +87,17 @@ private:
 	struct gpiod_line *gpio_m1;
 	struct gpiod_line *gpio_m2;
 	struct gpiod_line *gpio_m3;
+	
+	int resolution = 1;
+	float lastTemperature;
+
+	void getFocuserInfo();
+	int stepperStandbyID { -1 };
+	void stepperStandby();
+	int updateTemperatureID { -1 };
+	void updateTemperature();
+	int temperatureCompensationID { -1 };
+	void temperatureCompensation();
 };
 
 #endif

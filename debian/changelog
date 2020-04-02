@@ -1,3 +1,14 @@
+indi-astroberry-diy (2.6) buster; urgency=medium
+
+  * Resolution unlocked from 1/1 to 1/32 step
+  * Changing to lower resolution fine tuned
+  * Support for DS18B20 temperature sensor added
+  * Automatic temperature compensation added
+  * System info driver separated from board/relay driver
+  * Default BCM pins changed (!!!)
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Thu, 02 Apr 2020 03:06:01 +0200
+
 indi-astroberry-diy (2.5) buster; urgency=medium
 
   * Migratig low level control to libgpiod

@@ -165,10 +165,10 @@ bool IndiAstroberrySystem::initProperties()
 
 	//update Hardware
 	//https://www.raspberrypi.org/documentation/hardware/raspberrypi/revision-codes/README.md
-        pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
-        fgets(buffer, 128, pipe);
-        pclose(pipe);
-        IUSaveText(&SysInfoT[0], buffer);
+	pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[0], buffer);
 	//IUSaveText(&SysInfoT[0], getHardwareRev());
 
 	//update Hostname
