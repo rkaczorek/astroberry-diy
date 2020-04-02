@@ -494,7 +494,7 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
             IDSetNumber(&FocusBacklashNP, nullptr);
             FocusBacklashNP.s=IPS_OK;
             IDSetNumber(&FocusBacklashNP, nullptr);
-            DEBUGF(INDI::Logger::DBG_SESSION, "Backlash set to %0.0f steps", FocusBacklashN[0].value);
+            DEBUGF(INDI::Logger::DBG_SESSION, "Backlash set to %0.0f steps.", FocusBacklashN[0].value);
             return true;
         }
 
@@ -506,7 +506,7 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 		   IDSetNumber(&FocusStepDelayNP, nullptr);
 		   FocusStepDelayNP.s=IPS_OK;
 		   IDSetNumber(&FocusStepDelayNP, nullptr);
-		   DEBUGF(INDI::Logger::DBG_SESSION, "Step delay set to %0.0f ms", FocusStepDelayN[0].value);
+		   DEBUGF(INDI::Logger::DBG_SESSION, "Step delay set to %0.0f ms.", FocusStepDelayN[0].value);
            return true;
         }
 
@@ -586,12 +586,12 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 
 				if ( MotorBoardS[0].s == ISS_ON)
 				{
-					DEBUG(INDI::Logger::DBG_SESSION, "Control Board set to DRV8834");
+					DEBUG(INDI::Logger::DBG_SESSION, "Control Board set to DRV8834.");
 				}
 
 				if ( MotorBoardS[1].s == ISS_ON)
 				{
-					DEBUG(INDI::Logger::DBG_SESSION, "Control Board set to A4988");
+					DEBUG(INDI::Logger::DBG_SESSION, "Control Board set to A4988.");
 				}
 
 				MotorBoardSP.s = IPS_OK;
@@ -653,7 +653,7 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 				} else {
 					position_adjustment = last_resolution - position_adjustment;
 				}
-				DEBUGF(INDI::Logger::DBG_SESSION, "Focuser position adjusted by %d steps at 1/%d resolution to sync with 1/%d resolution", position_adjustment, last_resolution, resolution);
+				DEBUGF(INDI::Logger::DBG_SESSION, "Focuser position adjusted by %d steps at 1/%d resolution to sync with 1/%d resolution.", position_adjustment, last_resolution, resolution);
 				MoveAbsFocuser(FocusAbsPosN[0].value + position_adjustment);
 			}
 
@@ -689,7 +689,7 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 
 			FocusResolutionSP.s = IPS_OK;
 			IDSetSwitch(&FocusResolutionSP, nullptr);
-			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser resolution set to 1/%d", resolution);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser resolution set to 1/%d.", resolution);
 			return true;
 		}
 
@@ -752,7 +752,7 @@ bool AstroberryFocuser::ISNewText (const char *dev, const char *name, char *text
 
 			ActiveTelescopeTP.s=IPS_OK;
 			IDSetText(&ActiveTelescopeTP, nullptr);
-			DEBUGF(INDI::Logger::DBG_SESSION, "Active telescope set to %s", ActiveTelescopeT[0].text);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Active telescope set to %s.", ActiveTelescopeT[0].text);
 			return true;
         }
 	}
@@ -765,7 +765,7 @@ bool AstroberryFocuser::ISSnoopDevice (XMLEle *root)
 	if (IUSnoopNumber(root, &ScopeParametersNP) == 0)
 	{
 		getFocuserInfo();
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Telescope parameters: %0.0f, %0.0f", ScopeParametersN[0].value, ScopeParametersN[1].value);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Telescope parameters: %0.0f, %0.0f.", ScopeParametersN[0].value, ScopeParametersN[1].value);
 		return true;
 	}
 
@@ -796,7 +796,7 @@ void AstroberryFocuser::TimerHit()
 bool AstroberryFocuser::AbortFocuser()
 {
 	// TODO
-	DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted");
+	DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
     return true;
 }
 
@@ -810,13 +810,13 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 {
     if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
     {
-        DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range");
+        DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
         return IPS_ALERT;
     }
 
     if (targetTicks == FocusAbsPosN[0].value)
     {
-        DEBUG(INDI::Logger::DBG_SESSION, "Already at the requested position");
+        DEBUG(INDI::Logger::DBG_SESSION, "Already at the requested position.");
         return IPS_OK;
     }
 
@@ -828,7 +828,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     if ( gpiod_line_get_value(gpio_sleep) == 0 )
     {
 		gpiod_line_set_value(gpio_sleep, 1);
-		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up");
+		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up.");
 	}
 
     // check last motion direction for backlash triggering
@@ -856,7 +856,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     // if direction changed do backlash adjustment
     if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
     {
-		DEBUGF(INDI::Logger::DBG_SESSION, "Backlash compensation by %0.0f steps", FocusBacklashN[0].value);
+		DEBUGF(INDI::Logger::DBG_SESSION, "Backlash compensation by %0.0f steps.", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
 			// step on
@@ -873,7 +873,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     // process targetTicks
     int ticks = abs(targetTicks - FocusAbsPosN[0].value);
 
-    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d", direction, targetTicks);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", direction, targetTicks);
 
     for ( int i = 0; i < ticks; i++ )
     {
@@ -901,7 +901,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 	savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
 
     // update abspos value and status
-    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f", FocusAbsPosN[0].value);
+    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
 
     FocusAbsPosNP.s = IPS_OK;
     IDSetNumber(&FocusAbsPosNP, nullptr);
@@ -1043,24 +1043,24 @@ int AstroberryFocuser::savePosition(int pos)
 		pFile = fopen (posFileName,"r");
 		if (pFile == NULL)
 		{
-			DEBUGF(INDI::Logger::DBG_ERROR, "Failed to open file %s", posFileName);
+			DEBUGF(INDI::Logger::DBG_ERROR, "Failed to open file %s.", posFileName);
 			return -1;
 		}
 
 		fgets (buf , 100, pFile);
 		pos = atoi (buf);
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Reading position %d from %s", pos, posFileName);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Reading position %d from %s.", pos, posFileName);
 	} else {
 		pFile = fopen (posFileName,"w");
 		if (pFile == NULL)
 		{
-			DEBUGF(INDI::Logger::DBG_ERROR, "Failed to open file %s", posFileName);
+			DEBUGF(INDI::Logger::DBG_ERROR, "Failed to open file %s.", posFileName);
 			return -1;
 		}
 
 		sprintf(buf, "%d", pos);
 		fputs (buf, pFile);
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Writing position %s to %s", buf, posFileName);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Writing position %s to %s.", buf, posFileName);
 	}
 
 	fclose (pFile);
@@ -1074,8 +1074,8 @@ bool AstroberryFocuser::readDS18B20()
 	struct dirent *dirent;
 	char dev[16];      // Dev ID
 	char devPath[128]; // Path to device
-	char buf[256];     // Data from device
-	char tmpData[6];   // Temp C * 1000 reported by device
+	char buf[256]; // Data from device
+	char temperatureData[6]; // Temp C * 1000 reported by device
 	char path[] = "/sys/bus/w1/devices";
 	ssize_t numRead;
 	float tempC, tempF;
@@ -1096,7 +1096,7 @@ bool AstroberryFocuser::readDS18B20()
 		}
 		(void) closedir (dir);
 	} else {
-		DEBUG(INDI::Logger::DBG_WARNING, "Temperature compensation disabled. 1-Wire interface is not available.");
+		DEBUG(INDI::Logger::DBG_WARNING, "Temperature sensor disabled. 1-Wire interface is not available.");
 		return false;
 	}
 
@@ -1107,7 +1107,7 @@ bool AstroberryFocuser::readDS18B20()
 	int fd = open(devPath, O_RDONLY);
 	if(fd == -1)
 	{
-		DEBUG(INDI::Logger::DBG_WARNING, "Temperature sensor not available");
+		DEBUG(INDI::Logger::DBG_WARNING, "Temperature sensor not available.");
 		return false;
 	}
 
@@ -1115,21 +1115,31 @@ bool AstroberryFocuser::readDS18B20()
 	FocusTemperatureNP.s=IPS_BUSY;
 	IDSetNumber(&FocusTemperatureNP, nullptr);
 
-	while((numRead = read(fd, buf, 256)) > 0)
-	{
-		strncpy(tmpData, strstr(buf, "t=") + 2, 5);
-		tempC = strtof(tmpData, NULL) / 1000;
-		//tempF = (tempC / 1000) * 9 / 5 + 32;
-	}
-
+	// read sensor output
+	while((numRead = read(fd, buf, 256)) > 0);
 	close(fd);
+
+	// parse temperature value from sensor output
+	strncpy(temperatureData, strstr(buf, "t=") + 2, 5);
+	DEBUGF(INDI::Logger::DBG_DEBUG, "Temperature sensor raw output: %s", buf);
+	DEBUGF(INDI::Logger::DBG_DEBUG, "Temperature string: %s", temperatureData);
+
+	tempC = strtof(temperatureData, NULL) / 1000;
+	// tempF = (tempC / 1000) * 9 / 5 + 32;
+
+	// check if temperature is reasonable
+	if(tempC > 100)
+	{
+		DEBUG(INDI::Logger::DBG_DEBUG, "Temperature reading out of range.");
+		return false;
+	}
 
 	FocusTemperatureN[0].value = tempC;
 
 	// set OK
 	FocusTemperatureNP.s=IPS_OK;
 	IDSetNumber(&FocusTemperatureNP, nullptr);
-	DEBUGF(INDI::Logger::DBG_DEBUG, "Temperature: %.2f °C", tempC);
+	DEBUGF(INDI::Logger::DBG_DEBUG, "Temperature: %.2f°C", tempC);
 
 	return true;
 }
@@ -1171,7 +1181,7 @@ void AstroberryFocuser::getFocuserInfo()
 	FocuserInfoN[2].value = steps_per_cfz;
 	IDSetNumber(&FocuserInfoNP, nullptr);
 
-	DEBUGF(INDI::Logger::DBG_DEBUG, "Focuser Info: %0.2f %0.2f %0.2f", FocuserInfoN[0].value, FocuserInfoN[1].value, FocuserInfoN[2].value);
+	DEBUGF(INDI::Logger::DBG_DEBUG, "Focuser Info: %0.2f %0.2f %0.2f.", FocuserInfoN[0].value, FocuserInfoN[1].value, FocuserInfoN[2].value);
 }
 
 void AstroberryFocuser::stepperStandbyHelper(void *context)
@@ -1195,7 +1205,7 @@ void AstroberryFocuser::stepperStandby()
 		return;
 
 	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
-	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby");
+	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby.");
 }
 
 void AstroberryFocuser::updateTemperature()
@@ -1218,7 +1228,7 @@ void AstroberryFocuser::temperatureCompensation()
 		float thermalExpansionRatio = TemperatureCoefN[0].value * ScopeParametersN[1].value / 1000; // termal expansion in micrometers per 1 celcius degree
 		float thermalExpansion = thermalExpansionRatio * deltaTemperature; // actual thermal expansion
 
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Thermal expansion of %0.1f μm due to temperature change of %0.2f °C", thermalExpansion, deltaTemperature);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Thermal expansion of %0.1f μm due to temperature change of %0.2f°C", thermalExpansion, deltaTemperature);
 
 		if ( abs(thermalExpansion) > FocuserInfoN[1].value / 2)
 		{
