@@ -1,3 +1,9 @@
+indi-astroberry-diy (2.6.2) UNRELEASED; urgency=medium
+
+  * Improving temperature sanity check
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 04 Apr 2020 14:05:13 +0200
+
 indi-astroberry-diy (2.6.1) buster; urgency=medium
 
   * Temperature sanity check added

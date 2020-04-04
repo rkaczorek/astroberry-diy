@@ -22,7 +22,6 @@
  * - Handle AbortFocuser()
  * - Add temperature compensation auto learning and save temperature compensation curve to xml
  * - Add simulation mode
- * 
  */
 
 #include <stdio.h>
@@ -144,7 +143,7 @@ bool AstroberryFocuser::Connect()
 			gpiod_chip_close(chip);
 			return false;
 		}
-	}	
+	}
 
 	// Select gpios
 	gpio_dir = gpiod_chip_get_line(chip, BCMpinsN[0].value);
@@ -306,7 +305,7 @@ bool AstroberryFocuser::initProperties()
     addDebugControl ();
     addConfigurationControl();
 	removeProperty("POLLING_PERIOD", nullptr);
-	
+
 	// Load some custom properties before connecting
 	defineSwitch(&MotorBoardSP);
 	defineNumber(&BCMpinsNP);
@@ -340,7 +339,7 @@ bool AstroberryFocuser::updateProperties()
 		defineSwitch(&ResetAbsPosSP);
 
 		IDSnoopDevice(ActiveTelescopeT[0].text, "TELESCOPE_INFO");
-		
+
 		if (readDS18B20())
 		{
 			defineNumber(&FocusTemperatureNP);
@@ -399,7 +398,7 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 
 					// Verify unique BCM Pin assignement
 					for (unsigned j = i + 1; j < valcount; j++)
-					{					
+					{
 						if ( values[i] == values[j] )
 						{
 							BCMpinsNP.s=IPS_ALERT;
@@ -774,19 +773,19 @@ bool AstroberryFocuser::ISSnoopDevice (XMLEle *root)
 
 bool AstroberryFocuser::saveConfigItems(FILE *fp)
 {
-    IUSaveConfigSwitch(fp, &FocusResolutionSP);
-    IUSaveConfigSwitch(fp, &FocusReverseSP);
-    IUSaveConfigSwitch(fp, &MotorBoardSP);
-    IUSaveConfigSwitch(fp, &TemperatureCompensateSP);
-    IUSaveConfigNumber(fp, &FocusMaxPosNP);
+	IUSaveConfigSwitch(fp, &FocusResolutionSP);
+	IUSaveConfigSwitch(fp, &FocusReverseSP);
+	IUSaveConfigSwitch(fp, &MotorBoardSP);
+	IUSaveConfigSwitch(fp, &TemperatureCompensateSP);
+	IUSaveConfigNumber(fp, &FocusMaxPosNP);
 	IUSaveConfigNumber(fp, &BCMpinsNP);
-    IUSaveConfigNumber(fp, &FocusStepDelayNP);
-    IUSaveConfigNumber(fp, &FocusBacklashNP);
-    IUSaveConfigNumber(fp, &FocuserTravelNP);
-    IUSaveConfigNumber(fp, &PresetNP);
-    IUSaveConfigNumber(fp, &TemperatureCoefNP);
-    IUSaveConfigText(fp, &ActiveTelescopeTP);
-    return true;
+	IUSaveConfigNumber(fp, &FocusStepDelayNP);
+	IUSaveConfigNumber(fp, &FocusBacklashNP);
+	IUSaveConfigNumber(fp, &FocuserTravelNP);
+	IUSaveConfigNumber(fp, &PresetNP);
+	IUSaveConfigNumber(fp, &TemperatureCoefNP);
+	IUSaveConfigText(fp, &ActiveTelescopeTP);
+	return true;
 }
 
 void AstroberryFocuser::TimerHit()
@@ -797,7 +796,7 @@ bool AstroberryFocuser::AbortFocuser()
 {
 	// TODO
 	DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
-    return true;
+	return true;
 }
 
 IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, int ticks)
@@ -1128,7 +1127,7 @@ bool AstroberryFocuser::readDS18B20()
 	// tempF = (tempC / 1000) * 9 / 5 + 32;
 
 	// check if temperature is reasonable
-	if(tempC > 100)
+	if(abs(tempC) > 100)
 	{
 		DEBUG(INDI::Logger::DBG_DEBUG, "Temperature reading out of range.");
 		return false;
