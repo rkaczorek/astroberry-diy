@@ -847,7 +847,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
     }
 
 	// handle Reverse Motion
-	if (FocusReverseS[REVERSED_ENABLED].s == ISS_ON) {
+	if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
 		lastdir = (lastdir == 0) ? lastdir == 1 : lastdir == 0;
 		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
 	}
