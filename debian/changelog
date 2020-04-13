@@ -1,8 +1,14 @@
-indi-astroberry-diy (2.6.2) UNRELEASED; urgency=medium
+indi-astroberry-diy (2.6.3) buster; urgency=medium
+
+  * Syncing to INDI 1.8.5
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Mon, 13 Apr 2020 22:04:42 +0200
+
+indi-astroberry-diy (2.6.2) buster; urgency=medium
 
   * Improving temperature sanity check
 
- -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 04 Apr 2020 14:05:13 +0200
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Mon, 13 Apr 2020 21:55:05 +0200
 
 indi-astroberry-diy (2.6.1) buster; urgency=medium
 
