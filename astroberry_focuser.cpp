@@ -832,7 +832,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 	}
 
 	// check last motion direction for backlash triggering
-	char lastdir = gpiod_line_get_value(gpio_dir);
+	int lastdir = gpiod_line_get_value(gpio_dir);
 
 	// set direction
 	const char* direction;

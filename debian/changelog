@@ -1,3 +1,9 @@
+indi-astroberry-diy (2.6.4) buster; urgency=medium
+
+  * Fixing backlash
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 18 Apr 2020 12:25:43 +0200
+
 indi-astroberry-diy (2.6.3) buster; urgency=medium
 
   * Syncing to INDI 1.8.5
