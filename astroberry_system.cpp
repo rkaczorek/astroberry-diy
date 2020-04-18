@@ -33,36 +33,41 @@ void ISPoll(void *p);
 
 void ISInit()
 {
-   static int isInit = 0;
+	static int isInit = 0;
 
-   if (isInit == 1)
-       return;
-   if(indiAstroberrySystem.get() == 0)
-   {
-       isInit = 1;
-       indiAstroberrySystem.reset(new IndiAstroberrySystem());
-   }
+	if (isInit == 1)
+		return;
+	if(indiAstroberrySystem.get() == 0)
+	{
+		isInit = 1;
+		indiAstroberrySystem.reset(new IndiAstroberrySystem());
+	}
 }
+
 void ISGetProperties(const char *dev)
 {
         ISInit();
         indiAstroberrySystem->ISGetProperties(dev);
 }
+
 void ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int num)
 {
         ISInit();
         indiAstroberrySystem->ISNewSwitch(dev, name, states, names, num);
 }
+
 void ISNewText(	const char *dev, const char *name, char *texts[], char *names[], int num)
 {
         ISInit();
         indiAstroberrySystem->ISNewText(dev, name, texts, names, num);
 }
+
 void ISNewNumber(const char *dev, const char *name, double values[], char *names[], int num)
 {
         ISInit();
         indiAstroberrySystem->ISNewNumber(dev, name, values, names, num);
 }
+
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int num)
 {
 	INDI_UNUSED(dev);
@@ -74,18 +79,22 @@ void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[],
 	INDI_UNUSED(names);
 	INDI_UNUSED(num);
 }
+
 void ISSnoopDevice (XMLEle *root)
 {
 	ISInit();
 	indiAstroberrySystem->ISSnoopDevice(root);
 }
+
 IndiAstroberrySystem::IndiAstroberrySystem()
 {
 	setVersion(VERSION_MAJOR,VERSION_MINOR);
 }
+
 IndiAstroberrySystem::~IndiAstroberrySystem()
 {
 }
+
 bool IndiAstroberrySystem::Connect()
 {
 	SetTimer(1000);
@@ -136,28 +145,30 @@ void IndiAstroberrySystem::TimerHit()
 		IDSetText(&SysInfoTP, NULL);
 
 		SetTimer(1000);
-    }
+	}
 }
+
 const char * IndiAstroberrySystem::getDefaultName()
 {
         return (char *)"Astroberry System";
 }
+
 bool IndiAstroberrySystem::initProperties()
 {
-    // We init parent properties first
-    INDI::DefaultDevice::initProperties();
+	// We init parent properties first
+	INDI::DefaultDevice::initProperties();
 
-    IUFillText(&SysTimeT[0],"LOCAL_TIME","Local Time",NULL);
-    IUFillText(&SysTimeT[1],"UTC_OFFSET","UTC Offset",NULL);
-    IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
+	IUFillText(&SysTimeT[0],"LOCAL_TIME","Local Time",NULL);
+	IUFillText(&SysTimeT[1],"UTC_OFFSET","UTC Offset",NULL);
+	IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
-    IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);
-    IUFillText(&SysInfoT[1],"UPTIME","Uptime (hh:mm)",NULL);
-    IUFillText(&SysInfoT[2],"LOAD","Load (1 / 5 / 15 min.)",NULL);
-    IUFillText(&SysInfoT[3],"HOSTNAME","Hostname",NULL);
-    IUFillText(&SysInfoT[4],"LOCAL_IP","Local IP",NULL);
-    IUFillText(&SysInfoT[5],"PUBLIC_IP","Public IP",NULL);
-    IUFillTextVector(&SysInfoTP,SysInfoT,6,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
+	IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);
+	IUFillText(&SysInfoT[1],"UPTIME","Uptime (hh:mm)",NULL);
+	IUFillText(&SysInfoT[2],"LOAD","Load (1 / 5 / 15 min.)",NULL);
+	IUFillText(&SysInfoT[3],"HOSTNAME","Hostname",NULL);
+	IUFillText(&SysInfoT[4],"LOCAL_IP","Local IP",NULL);
+	IUFillText(&SysInfoT[5],"PUBLIC_IP","Public IP",NULL);
+	IUFillTextVector(&SysInfoTP,SysInfoT,6,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
 	// Get basic system info
 	FILE* pipe;
@@ -192,49 +203,56 @@ bool IndiAstroberrySystem::initProperties()
 	// Update client
 	IDSetText(&SysInfoTP, NULL);
 
-    return true;
+	return true;
 }
+
 bool IndiAstroberrySystem::updateProperties()
 {
-    // Call parent update properties first
-    INDI::DefaultDevice::updateProperties();
+	// Call parent update properties first
+	INDI::DefaultDevice::updateProperties();
 
-    if (isConnected())
-    {
-	defineText(&SysTimeTP);
-	defineText(&SysInfoTP);
-    }
-    else
-    {
-	// We're disconnected
-	deleteProperty(SysTimeTP.name);
-	deleteProperty(SysInfoTP.name);
-    }
-    return true;
+	if (isConnected())
+	{
+		defineText(&SysTimeTP);
+		defineText(&SysInfoTP);
+	}
+	else
+	{
+		// We're disconnected
+		deleteProperty(SysTimeTP.name);
+		deleteProperty(SysInfoTP.name);
+	}
+	return true;
 }
+
 void IndiAstroberrySystem::ISGetProperties(const char *dev)
 {
-    INDI::DefaultDevice::ISGetProperties(dev);
+	INDI::DefaultDevice::ISGetProperties(dev);
 }
+
 bool IndiAstroberrySystem::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
 	return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
 }
+
 bool IndiAstroberrySystem::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 	return INDI::DefaultDevice::ISNewSwitch (dev, name, states, names, n);
 }
+
 bool IndiAstroberrySystem::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
 {
 	return INDI::DefaultDevice::ISNewText (dev, name, texts, names, n);
 }
+
 bool IndiAstroberrySystem::ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
 	return INDI::DefaultDevice::ISNewBLOB (dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
+
 bool IndiAstroberrySystem::ISSnoopDevice(XMLEle *root)
 {
-    return INDI::DefaultDevice::ISSnoopDevice(root);
+	return INDI::DefaultDevice::ISSnoopDevice(root);
 }
 /*
 const char * IndiAstroberrySystem::getHardwareRev()

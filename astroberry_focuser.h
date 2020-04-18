@@ -34,9 +34,9 @@ public:
 	virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
 	virtual bool ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n);
 	virtual bool ISSnoopDevice(XMLEle *root);
-    static void stepperStandbyHelper(void *context);
-    static void updateTemperatureHelper(void *context);
-    static void temperatureCompensationHelper(void *context);
+	static void stepperStandbyHelper(void *context);
+	static void updateTemperatureHelper(void *context);
+	static void temperatureCompensationHelper(void *context);
 protected:
 	virtual IPState MoveAbsFocuser(int ticks);
 	virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
@@ -75,10 +75,10 @@ private:
 	INumberVectorProperty ScopeParametersNP;
 	INumber FocusTemperatureN[1];
 	INumberVectorProperty FocusTemperatureNP;
-    INumber TemperatureCoefN[1];
-    INumberVectorProperty TemperatureCoefNP;
-    ISwitch TemperatureCompensateS[2];
-    ISwitchVectorProperty TemperatureCompensateSP;
+	INumber TemperatureCoefN[1];
+	INumberVectorProperty TemperatureCoefNP;
+	ISwitch TemperatureCompensateS[2];
+	ISwitchVectorProperty TemperatureCompensateSP;
 
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_dir;
@@ -87,7 +87,7 @@ private:
 	struct gpiod_line *gpio_m1;
 	struct gpiod_line *gpio_m2;
 	struct gpiod_line *gpio_m3;
-	
+
 	int resolution = 1;
 	float lastTemperature;
 

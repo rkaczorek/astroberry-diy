@@ -54,15 +54,15 @@ void ISPoll(void *p);
 
 void ISInit()
 {
-   static int isInit = 0;
+	static int isInit = 0;
 
-   if (isInit == 1)
-       return;
-   if(astroberryFocuser.get() == 0)
-   {
-       isInit = 1;
-       astroberryFocuser.reset(new AstroberryFocuser());
-   }
+	if (isInit == 1)
+	return;
+	if(astroberryFocuser.get() == 0)
+	{
+	isInit = 1;
+	astroberryFocuser.reset(new AstroberryFocuser());
+	}
 }
 
 void ISGetProperties(const char *dev)
@@ -91,19 +91,19 @@ void ISNewNumber(const char *dev, const char *name, double values[], char *names
 
 void ISNewBLOB (const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n)
 {
-  INDI_UNUSED(dev);
-  INDI_UNUSED(name);
-  INDI_UNUSED(sizes);
-  INDI_UNUSED(blobsizes);
-  INDI_UNUSED(blobs);
-  INDI_UNUSED(formats);
-  INDI_UNUSED(names);
-  INDI_UNUSED(n);
+	INDI_UNUSED(dev);
+	INDI_UNUSED(name);
+	INDI_UNUSED(sizes);
+	INDI_UNUSED(blobsizes);
+	INDI_UNUSED(blobs);
+	INDI_UNUSED(formats);
+	INDI_UNUSED(names);
+	INDI_UNUSED(n);
 }
 
 void ISSnoopDevice (XMLEle *root)
 {
-    astroberryFocuser->ISSnoopDevice(root);
+	astroberryFocuser->ISSnoopDevice(root);
 }
 
 AstroberryFocuser::AstroberryFocuser()
@@ -207,12 +207,12 @@ bool AstroberryFocuser::Disconnect()
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
 
-    return true;
+	return true;
 }
 
 bool AstroberryFocuser::initProperties()
 {
-    INDI::Focuser::initProperties();
+	INDI::Focuser::initProperties();
 
 	// Focuser Resolution
 	IUFillSwitch(&FocusResolutionS[0],"FOCUS_RESOLUTION_1","Full Step",ISS_ON);
@@ -256,8 +256,8 @@ bool AstroberryFocuser::initProperties()
 	IUFillSwitchVector(&ResetAbsPosSP,ResetAbsPosS,1,getDeviceName(),"RESET_ABS_SW","Saved Position",OPTIONS_TAB,IP_RW,ISR_1OFMANY,0,IPS_IDLE);
 
 	// Active telescope setting
-    IUFillText(&ActiveTelescopeT[0], "ACTIVE_TELESCOPE_NAME", "Telescope", "Telescope Simulator");
-    IUFillTextVector(&ActiveTelescopeTP, ActiveTelescopeT, 1, getDeviceName(), "ACTIVE_TELESCOPE", "Snoop devices", OPTIONS_TAB,IP_RW, 0, IPS_IDLE);
+	IUFillText(&ActiveTelescopeT[0], "ACTIVE_TELESCOPE_NAME", "Telescope", "Telescope Simulator");
+	IUFillTextVector(&ActiveTelescopeTP, ActiveTelescopeT, 1, getDeviceName(), "ACTIVE_TELESCOPE", "Snoop devices", OPTIONS_TAB,IP_RW, 0, IPS_IDLE);
 
 	// Maximum focuser travel
 	IUFillNumber(&FocuserTravelN[0], "FOCUSER_TRAVEL_VALUE", "mm", "%0.0f", 10, 200, 10, 10);
@@ -267,19 +267,19 @@ bool AstroberryFocuser::initProperties()
 	IUFillNumber(&FocusTemperatureN[0], "FOCUS_TEMPERATURE_VALUE", "°C", "%0.2f", -50, 50, 1, 0);
 	IUFillNumberVector(&FocusTemperatureNP, FocusTemperatureN, 1, getDeviceName(), "FOCUS_TEMPERATURE", "Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    // Temperature Coefficient
-    IUFillNumber(&TemperatureCoefN[0], "μm/m°C", "", "%.1f", 0, 50, 1, 0);
-    IUFillNumberVector(&TemperatureCoefNP, TemperatureCoefN, 1, getDeviceName(), "Temperature Coefficient", "", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
+	// Temperature Coefficient
+	IUFillNumber(&TemperatureCoefN[0], "μm/m°C", "", "%.1f", 0, 50, 1, 0);
+	IUFillNumberVector(&TemperatureCoefNP, TemperatureCoefN, 1, getDeviceName(), "Temperature Coefficient", "", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE);
 
-    // Compensate for temperature
-    IUFillSwitch(&TemperatureCompensateS[0], "Enable", "", ISS_OFF);
-    IUFillSwitch(&TemperatureCompensateS[1], "Disable", "", ISS_ON);
-    IUFillSwitchVector(&TemperatureCompensateSP, TemperatureCompensateS, 2, getDeviceName(), "Temperature Compensate", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	// Compensate for temperature
+	IUFillSwitch(&TemperatureCompensateS[0], "Enable", "", ISS_OFF);
+	IUFillSwitch(&TemperatureCompensateS[1], "Disable", "", ISS_ON);
+	IUFillSwitchVector(&TemperatureCompensateSP, TemperatureCompensateS, 2, getDeviceName(), "Temperature Compensate", "", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
 	// Snooping params
-    IUFillNumber(&ScopeParametersN[0], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
-    IUFillNumber(&ScopeParametersN[1], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
-    IUFillNumberVector(&ScopeParametersNP, ScopeParametersN, 2, ActiveTelescopeT[0].text, "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
+	IUFillNumber(&ScopeParametersN[0], "TELESCOPE_APERTURE", "Aperture (mm)", "%g", 10, 5000, 0, 0.0);
+	IUFillNumber(&ScopeParametersN[1], "TELESCOPE_FOCAL_LENGTH", "Focal Length (mm)", "%g", 10, 10000, 0, 0.0);
+	IUFillNumberVector(&ScopeParametersNP, ScopeParametersN, 2, ActiveTelescopeT[0].text, "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
 
 	// initial values at resolution 1/1
 	FocusMaxPosN[0].min = 1000;
@@ -301,9 +301,9 @@ bool AstroberryFocuser::initProperties()
 	IDSetSwitch(&FocusMotionSP, nullptr);
 
 	// Add default properties
-    // addAuxControls(); // use instead if simulation mode is added to code
-    addDebugControl ();
-    addConfigurationControl();
+	// addAuxControls(); // use instead if simulation mode is added to code
+	addDebugControl ();
+	addConfigurationControl();
 	removeProperty("POLLING_PERIOD", nullptr);
 
 	// Load some custom properties before connecting
@@ -314,21 +314,21 @@ bool AstroberryFocuser::initProperties()
 	loadConfig(false, "MOTOR_BOARD"); // load stepper motor controller
 	loadConfig(false, "BCMPINS"); // load BCM Pins assignment
 
-    return true;
+	return true;
 }
 
 void AstroberryFocuser::ISGetProperties (const char *dev)
 {
-    INDI::Focuser::ISGetProperties(dev);
-    return;
+	INDI::Focuser::ISGetProperties(dev);
+	return;
 }
 
 bool AstroberryFocuser::updateProperties()
 {
-    INDI::Focuser::updateProperties();
+	INDI::Focuser::updateProperties();
 
-    if (isConnected())
-    {
+	if (isConnected())
+	{
 		defineText(&ActiveTelescopeTP);
 		defineNumber(&FocuserTravelNP);
 		defineSwitch(&FocusMotionSP);
@@ -353,7 +353,7 @@ bool AstroberryFocuser::updateProperties()
 			temperatureCompensationID = IEAddTimer(TEMPERATURE_COMPENSATION_TIMEOUT, temperatureCompensationHelper, this); // set temperature compensation timer
 		}
 
-    } else {
+	} else {
 		deleteProperty(ActiveTelescopeTP.name);
 		deleteProperty(FocuserTravelNP.name);
 		deleteProperty(FocusMotionSP.name);
@@ -363,11 +363,11 @@ bool AstroberryFocuser::updateProperties()
 		deleteProperty(FocusBacklashNP.name);
 		deleteProperty(ResetAbsPosSP.name);
 		deleteProperty(FocusTemperatureNP.name);
-        deleteProperty(TemperatureCoefNP.name);
-        deleteProperty(TemperatureCompensateSP.name);
-    }
+		deleteProperty(TemperatureCoefNP.name);
+		deleteProperty(TemperatureCompensateSP.name);
+	}
 
-    return true;
+	return true;
 }
 
 bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
@@ -375,9 +375,9 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 	// first we check if it's for our device
 	if(!strcmp(dev,getDeviceName()))
 	{
-        // handle BCMpins
-        if (!strcmp(name, BCMpinsNP.name))
-        {
+	        // handle BCMpins
+	        if (!strcmp(name, BCMpinsNP.name))
+	        {
 			unsigned int valcount = 6;
 
 			if (isConnected())
@@ -436,11 +436,11 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 				DEBUGF(INDI::Logger::DBG_SESSION, "BCM Pins set to DIR: BCM%0.0f, STEP: BCM%0.0f, SLEEP: BCM%0.0f, M1: BCM%0.0f, M2: BCM%0.0f, M3: BCM%0.0f", BCMpinsN[0].value, BCMpinsN[1].value, BCMpinsN[2].value, BCMpinsN[3].value, BCMpinsN[4].value, BCMpinsN[5].value);
 				return true;
 			}
-        }
+	        }
 
-        // handle focus maximum position
-        if (!strcmp(name, FocusMaxPosNP.name))
-        {
+	        // handle focus maximum position
+	        if (!strcmp(name, FocusMaxPosNP.name))
+	        {
 			IUUpdateNumber(&FocusMaxPosNP,values,names,n);
 
 			FocusAbsPosN[0].max = FocusMaxPosN[0].value;
@@ -450,27 +450,27 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 			IDSetNumber(&FocusMaxPosNP, nullptr);
 			getFocuserInfo();
 			return true;
-        }
+	        }
 
-        // handle focus absolute position
-        if (!strcmp(name, FocusAbsPosNP.name))
-        {
+	        // handle focus absolute position
+	        if (!strcmp(name, FocusAbsPosNP.name))
+	        {
 			int newPos = (int) values[0];
 
-            if ( MoveAbsFocuser(newPos) == IPS_OK )
-            {
+			if ( MoveAbsFocuser(newPos) == IPS_OK )
+			{
 				IUUpdateNumber(&FocusAbsPosNP,values,names,n);
 				FocusAbsPosNP.s=IPS_OK;
 				IDSetNumber(&FocusAbsPosNP, nullptr);
 				return true;
-            } else {
+			} else {
 				return false;
 			}
-        }
+	        }
 
-        // handle focus relative position
-        if (!strcmp(name, FocusRelPosNP.name))
-        {
+	        // handle focus relative position
+	        if (!strcmp(name, FocusRelPosNP.name))
+	        {
 			IUUpdateNumber(&FocusRelPosNP,values,names,n);
 
 			//FOCUS_INWARD
@@ -483,68 +483,68 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 
 			IDSetNumber(&FocusRelPosNP, nullptr);
 			return true;
-        }
+	        }
 
-        // handle focus backlash
-        if (!strcmp(name, FocusBacklashNP.name))
-        {
-            IUUpdateNumber(&FocusBacklashNP,values,names,n);
-            FocusBacklashNP.s=IPS_BUSY;
-            IDSetNumber(&FocusBacklashNP, nullptr);
-            FocusBacklashNP.s=IPS_OK;
-            IDSetNumber(&FocusBacklashNP, nullptr);
-            DEBUGF(INDI::Logger::DBG_SESSION, "Backlash set to %0.0f steps.", FocusBacklashN[0].value);
-            return true;
-        }
+	        // handle focus backlash
+	        if (!strcmp(name, FocusBacklashNP.name))
+	        {
+			IUUpdateNumber(&FocusBacklashNP,values,names,n);
+			FocusBacklashNP.s=IPS_BUSY;
+			IDSetNumber(&FocusBacklashNP, nullptr);
+			FocusBacklashNP.s=IPS_OK;
+			IDSetNumber(&FocusBacklashNP, nullptr);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Backlash set to %0.0f steps.", FocusBacklashN[0].value);
+			return true;
+	        }
 
-        // handle focus step delay
-        if (!strcmp(name, FocusStepDelayNP.name))
-        {
-		   IUUpdateNumber(&FocusStepDelayNP,values,names,n);
-		   FocusStepDelayNP.s=IPS_BUSY;
-		   IDSetNumber(&FocusStepDelayNP, nullptr);
-		   FocusStepDelayNP.s=IPS_OK;
-		   IDSetNumber(&FocusStepDelayNP, nullptr);
-		   DEBUGF(INDI::Logger::DBG_SESSION, "Step delay set to %0.0f ms.", FocusStepDelayN[0].value);
-           return true;
-        }
+	        // handle focus step delay
+	        if (!strcmp(name, FocusStepDelayNP.name))
+	        {
+			IUUpdateNumber(&FocusStepDelayNP,values,names,n);
+			FocusStepDelayNP.s=IPS_BUSY;
+			IDSetNumber(&FocusStepDelayNP, nullptr);
+			FocusStepDelayNP.s=IPS_OK;
+			IDSetNumber(&FocusStepDelayNP, nullptr);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Step delay set to %0.0f ms.", FocusStepDelayN[0].value);
+			return true;
+	        }
 
-        // handle focuser travel
-        if (!strcmp(name, FocuserTravelNP.name))
-        {
+	        // handle focuser travel
+	        if (!strcmp(name, FocuserTravelNP.name))
+	        {
 			IUUpdateNumber(&FocuserTravelNP,values,names,n);
 			getFocuserInfo();
 			FocuserTravelNP.s=IPS_OK;
 			IDSetNumber(&FocuserTravelNP, nullptr);
 			DEBUGF(INDI::Logger::DBG_SESSION, "Maximum focuser travel set to %0.0f mm", FocuserTravelN[0].value);
 			return true;
-        }
+	        }
 
-        // handle temperature coefficient
-        if (!strcmp(name, TemperatureCoefNP.name))
-        {
+	        // handle temperature coefficient
+	        if (!strcmp(name, TemperatureCoefNP.name))
+	        {
 			IUUpdateNumber(&TemperatureCoefNP,values,names,n);
 			TemperatureCoefNP.s=IPS_OK;
 			IDSetNumber(&TemperatureCoefNP, nullptr);
 			DEBUGF(INDI::Logger::DBG_SESSION, "Temperature coefficient set to %0.1f μm/m°C", TemperatureCoefN[0].value);
 			return true;
-        }
+	        }
 	}
 
-    return INDI::Focuser::ISNewNumber(dev,name,values,names,n);
+	return INDI::Focuser::ISNewNumber(dev,name,values,names,n);
 }
 
 bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 	// first we check if it's for our device
-    if (!strcmp(dev, getDeviceName()))
-    {
-        // handle focus presets
-        if (!strcmp(name, PresetGotoSP.name))
-        {
-            IUUpdateSwitch(&PresetGotoSP, states, names, n);
+	if (!strcmp(dev, getDeviceName()))
+	{
+	        // handle focus presets
+		if (!strcmp(name, PresetGotoSP.name))
+	        {
+			IUUpdateSwitch(&PresetGotoSP, states, names, n);
 			PresetGotoSP.s = IPS_BUSY;
-            IDSetSwitch(&PresetGotoSP, nullptr);
+			IDSetSwitch(&PresetGotoSP, nullptr);
 
 			//Preset 1
 			if ( PresetGotoS[0].s == ISS_ON )
@@ -563,14 +563,14 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			PresetGotoS[2].s = ISS_OFF;
 			PresetGotoSP.s = IPS_OK;
 
-            IDSetSwitch(&PresetGotoSP, nullptr);
+			IDSetSwitch(&PresetGotoSP, nullptr);
 
-            return true;
-        }
+			return true;
+	        }
 
-        // handle motor board
-        if(!strcmp(name, MotorBoardSP.name))
-        {
+	        // handle motor board
+	        if(!strcmp(name, MotorBoardSP.name))
+	        {
 			int current_switch = IUFindOnSwitchIndex(&MotorBoardSP);
 
 			if (isConnected())
@@ -599,9 +599,9 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			}
 		}
 
-        // handle focus resolution
-        if(!strcmp(name, FocusResolutionSP.name))
-        {
+	        // handle focus resolution
+	        if(!strcmp(name, FocusResolutionSP.name))
+	        {
 			int last_resolution = resolution;
 			int current_switch = IUFindOnSwitchIndex(&FocusResolutionSP);
 
@@ -692,9 +692,9 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			return true;
 		}
 
-        // handle reset absolute position
-        if(!strcmp(name, ResetAbsPosSP.name))
-        {
+	        // handle reset absolute position
+	        if(!strcmp(name, ResetAbsPosSP.name))
+	        {
 			IUResetSwitch(&ResetAbsPosSP);
 
 			//set absolute position to zero and save to file
@@ -709,9 +709,9 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			return true;
 		}
 
-        // handle temperature compensation
-        if(!strcmp(name, TemperatureCompensateSP.name))
-        {
+	        // handle temperature compensation
+	        if(!strcmp(name, TemperatureCompensateSP.name))
+	        {
 			IUUpdateSwitch(&TemperatureCompensateSP, states, names, n);
 
 			if ( TemperatureCompensateS[0].s == ISS_ON)
@@ -732,28 +732,29 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			IDSetSwitch(&TemperatureCompensateSP, nullptr);
 			return true;
 		}
-    }
-    return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
+	}
+
+	return INDI::Focuser::ISNewSwitch(dev,name,states,names,n);
 }
 
 bool AstroberryFocuser::ISNewText (const char *dev, const char *name, char *texts[], char *names[], int n)
 {
 	// first we check if it's for our device
-    if (!strcmp(dev, getDeviceName()))
-    {
-        // handle active devices
-        if (!strcmp(name, ActiveTelescopeTP.name))
-        {
-			IUUpdateText(&ActiveTelescopeTP,texts,names,n);
+	if (!strcmp(dev, getDeviceName()))
+	{
+		// handle active devices
+		if (!strcmp(name, ActiveTelescopeTP.name))
+		{
+				IUUpdateText(&ActiveTelescopeTP,texts,names,n);
 
-			IUFillNumberVector(&ScopeParametersNP, ScopeParametersN, 2, ActiveTelescopeT[0].text, "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
-			IDSnoopDevice(ActiveTelescopeT[0].text, "TELESCOPE_INFO");
+				IUFillNumberVector(&ScopeParametersNP, ScopeParametersN, 2, ActiveTelescopeT[0].text, "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
+				IDSnoopDevice(ActiveTelescopeT[0].text, "TELESCOPE_INFO");
 
-			ActiveTelescopeTP.s=IPS_OK;
-			IDSetText(&ActiveTelescopeTP, nullptr);
-			DEBUGF(INDI::Logger::DBG_SESSION, "Active telescope set to %s.", ActiveTelescopeT[0].text);
-			return true;
-        }
+				ActiveTelescopeTP.s=IPS_OK;
+				IDSetText(&ActiveTelescopeTP, nullptr);
+				DEBUGF(INDI::Logger::DBG_SESSION, "Active telescope set to %s.", ActiveTelescopeT[0].text);
+				return true;
+		}
 	}
 
 	return INDI::Focuser::ISNewText(dev,name,texts,names,n);
@@ -768,7 +769,7 @@ bool AstroberryFocuser::ISSnoopDevice (XMLEle *root)
 		return true;
 	}
 
-    return INDI::Focuser::ISSnoopDevice(root);
+	return INDI::Focuser::ISSnoopDevice(root);
 }
 
 bool AstroberryFocuser::saveConfigItems(FILE *fp)
@@ -801,50 +802,50 @@ bool AstroberryFocuser::AbortFocuser()
 
 IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, int ticks)
 {
-    int targetTicks = FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
-    return MoveAbsFocuser(targetTicks);
+	int targetTicks = FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
+	return MoveAbsFocuser(targetTicks);
 }
 
 IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 {
-    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
-    {
-        DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
-        return IPS_ALERT;
-    }
+	if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+	{
+		DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
+		return IPS_ALERT;
+	}
 
-    if (targetTicks == FocusAbsPosN[0].value)
-    {
-        DEBUG(INDI::Logger::DBG_SESSION, "Already at the requested position.");
-        return IPS_OK;
-    }
+	if (targetTicks == FocusAbsPosN[0].value)
+	{
+		DEBUG(INDI::Logger::DBG_SESSION, "Already at the requested position.");
+		return IPS_OK;
+	}
 
-    // set focuser busy
-    FocusAbsPosNP.s = IPS_BUSY;
-    IDSetNumber(&FocusAbsPosNP, nullptr);
+	// set focuser busy
+	FocusAbsPosNP.s = IPS_BUSY;
+	IDSetNumber(&FocusAbsPosNP, nullptr);
 
-    // motor wake up
-    if ( gpiod_line_get_value(gpio_sleep) == 0 )
-    {
+	// motor wake up
+	if ( gpiod_line_get_value(gpio_sleep) == 0 )
+	{
 		gpiod_line_set_value(gpio_sleep, 1);
 		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up.");
 	}
 
-    // check last motion direction for backlash triggering
-    char lastdir = gpiod_line_get_value(gpio_dir);
+	// check last motion direction for backlash triggering
+	char lastdir = gpiod_line_get_value(gpio_dir);
 
-    // set direction
-    const char* direction;
-    if (targetTicks > FocusAbsPosN[0].value)
-    {
+	// set direction
+	const char* direction;
+	if (targetTicks > FocusAbsPosN[0].value)
+	{
 		// OUTWARD
 		gpiod_line_set_value(gpio_dir, 1);
 		direction = "OUTWARD";
-    } else {
+	} else {
 		// INWARD
 		gpiod_line_set_value(gpio_dir, 0);
 		direction = "INWARD";
-    }
+	}
 
 	// handle Reverse Motion
 	if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
@@ -852,9 +853,9 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
 	}
 
-    // if direction changed do backlash adjustment
-    if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
-    {
+	// if direction changed do backlash adjustment
+	if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
+	{
 		DEBUGF(INDI::Logger::DBG_SESSION, "Backlash compensation by %0.0f steps.", FocusBacklashN[0].value);
 		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
 		{
@@ -867,23 +868,23 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 			// wait
 			msleep(FocusStepDelayN[0].value);
 		}
-    }
+	}
 
-    // process targetTicks
-    int ticks = abs(targetTicks - FocusAbsPosN[0].value);
+	// process targetTicks
+	int ticks = abs(targetTicks - FocusAbsPosN[0].value);
 
-    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", direction, targetTicks);
+	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", direction, targetTicks);
 
-    for ( int i = 0; i < ticks; i++ )
-    {
-        // step on
-        gpiod_line_set_value(gpio_step, 1);
-        // wait
-        msleep(FocusStepDelayN[0].value);
-        // step off
-        gpiod_line_set_value(gpio_step, 0);
-        // wait
-        msleep(FocusStepDelayN[0].value);
+	for ( int i = 0; i < ticks; i++ )
+	{
+		// step on
+		gpiod_line_set_value(gpio_step, 1);
+		// wait
+		msleep(FocusStepDelayN[0].value);
+		// step off
+		gpiod_line_set_value(gpio_step, 0);
+		// wait
+		msleep(FocusStepDelayN[0].value);
 
 		// INWARD - count down
 		if ( direction == "INWARD" )
@@ -894,16 +895,16 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 			FocusAbsPosN[0].value += 1;
 
 		IDSetNumber(&FocusAbsPosNP, nullptr);
-    }
+	}
 
 	//save position to file
 	savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
 
-    // update abspos value and status
-    DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
+	// update abspos value and status
+	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
 
-    FocusAbsPosNP.s = IPS_OK;
-    IDSetNumber(&FocusAbsPosNP, nullptr);
+	FocusAbsPosNP.s = IPS_OK;
+	IDSetNumber(&FocusAbsPosNP, nullptr);
 
 	// reset last temperature
 	lastTemperature = FocusTemperatureN[0].value; // register last temperature
@@ -912,7 +913,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 	IERmTimer(stepperStandbyID);
 	stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);
 
-    return IPS_OK;
+	return IPS_OK;
 }
 
 void AstroberryFocuser::SetResolution(int res)
@@ -1020,20 +1021,20 @@ bool AstroberryFocuser::ReverseFocuser(bool enabled)
 	} else {
 		DEBUG(INDI::Logger::DBG_SESSION, "Reverse direction DISABLED.");
 	}
-    return true;
+	return true;
 }
 
 int AstroberryFocuser::savePosition(int pos)
 {
 	FILE * pFile;
-    char posFileName[MAXRBUF];
+	char posFileName[MAXRBUF];
 	char buf [100];
 
-    if (getenv("INDICONFIG"))
-    {
-        snprintf(posFileName, MAXRBUF, "%s.position", getenv("INDICONFIG"));
-    } else {
-        snprintf(posFileName, MAXRBUF, "%s/.indi/%s.position", getenv("HOME"), getDeviceName());
+	if (getenv("INDICONFIG"))
+	{
+		snprintf(posFileName, MAXRBUF, "%s.position", getenv("INDICONFIG"));
+	} else {
+		snprintf(posFileName, MAXRBUF, "%s/.indi/%s.position", getenv("HOME"), getDeviceName());
 	}
 
 

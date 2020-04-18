@@ -32,15 +32,15 @@ void ISPoll(void *p);
 
 void ISInit()
 {
-   static int isInit = 0;
+	static int isInit = 0;
 
-   if (isInit == 1)
-       return;
-   if(indiAstroberryRelays.get() == 0)
-   {
-       isInit = 1;
-       indiAstroberryRelays.reset(new IndiAstroberryRelays());
-   }
+	if (isInit == 1)
+		return;
+	if(indiAstroberryRelays.get() == 0)
+	{
+		isInit = 1;
+		indiAstroberryRelays.reset(new IndiAstroberryRelays());
+	}
 }
 void ISGetProperties(const char *dev)
 {
@@ -106,7 +106,7 @@ bool IndiAstroberryRelays::Connect()
 			gpiod_chip_close(chip);
 			return false;
 		}
-	}	
+	}
 
 	// Select gpios
 	gpio_relay1 = gpiod_chip_get_line(chip, BCMpinsN[0].value);
@@ -145,24 +145,24 @@ const char * IndiAstroberryRelays::getDefaultName()
 }
 bool IndiAstroberryRelays::initProperties()
 {
-    // We init parent properties first
-    INDI::DefaultDevice::initProperties();
+	// We init parent properties first
+	INDI::DefaultDevice::initProperties();
 
-    IUFillSwitch(&Switch1S[0], "SW1ON", "ON", ISS_OFF);
-    IUFillSwitch(&Switch1S[1], "SW1OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&Switch1SP, Switch1S, 2, getDeviceName(), "SWITCH_1", "Relay 1", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	IUFillSwitch(&Switch1S[0], "SW1ON", "ON", ISS_OFF);
+	IUFillSwitch(&Switch1S[1], "SW1OFF", "OFF", ISS_ON);
+	IUFillSwitchVector(&Switch1SP, Switch1S, 2, getDeviceName(), "SWITCH_1", "Relay 1", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&Switch2S[0], "SW2ON", "ON", ISS_OFF);
-    IUFillSwitch(&Switch2S[1], "SW2OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&Switch2SP, Switch2S, 2, getDeviceName(), "SWITCH_2", "Relay 2", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	IUFillSwitch(&Switch2S[0], "SW2ON", "ON", ISS_OFF);
+	IUFillSwitch(&Switch2S[1], "SW2OFF", "OFF", ISS_ON);
+	IUFillSwitchVector(&Switch2SP, Switch2S, 2, getDeviceName(), "SWITCH_2", "Relay 2", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&Switch3S[0], "SW3ON", "ON", ISS_OFF);
-    IUFillSwitch(&Switch3S[1], "SW3OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&Switch3SP, Switch3S, 2, getDeviceName(), "SWITCH_3", "Relay 3", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	IUFillSwitch(&Switch3S[0], "SW3ON", "ON", ISS_OFF);
+	IUFillSwitch(&Switch3S[1], "SW3OFF", "OFF", ISS_ON);
+	IUFillSwitchVector(&Switch3SP, Switch3S, 2, getDeviceName(), "SWITCH_3", "Relay 3", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-    IUFillSwitch(&Switch4S[0], "SW4ON", "ON", ISS_OFF);
-    IUFillSwitch(&Switch4S[1], "SW4OFF", "OFF", ISS_ON);
-    IUFillSwitchVector(&Switch4SP, Switch4S, 2, getDeviceName(), "SWITCH_4", "Relay 4", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	IUFillSwitch(&Switch4S[0], "SW4ON", "ON", ISS_OFF);
+	IUFillSwitch(&Switch4S[1], "SW4OFF", "OFF", ISS_ON);
+	IUFillSwitchVector(&Switch4SP, Switch4S, 2, getDeviceName(), "SWITCH_4", "Relay 4", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
 	IUFillNumber(&BCMpinsN[0], "BCMPIN01", "Relay 1", "%0.0f", 1, 27, 0, 5); // BCM5 = PIN29
 	IUFillNumber(&BCMpinsN[1], "BCMPIN02", "Relay 2", "%0.0f", 1, 27, 0, 6); // BCM6 = PIN31
@@ -174,42 +174,45 @@ bool IndiAstroberryRelays::initProperties()
 	defineNumber(&BCMpinsNP);	
 	loadConfig();
 
-    return true;
+	return true;
 }
 bool IndiAstroberryRelays::updateProperties()
 {
-    // Call parent update properties first
-    INDI::DefaultDevice::updateProperties();
+	// Call parent update properties first
+	INDI::DefaultDevice::updateProperties();
 
-    if (isConnected())
-    {
-	defineSwitch(&Switch1SP);
-	defineSwitch(&Switch2SP);
-	defineSwitch(&Switch3SP);
-	defineSwitch(&Switch4SP);
-    }
-    else
-    {
-	// We're disconnected
-	deleteProperty(Switch1SP.name);
-	deleteProperty(Switch2SP.name);
-	deleteProperty(Switch3SP.name);
-	deleteProperty(Switch4SP.name);
-    }
-    return true;
+	if (isConnected())
+	{
+		// We're connected
+		defineSwitch(&Switch1SP);
+		defineSwitch(&Switch2SP);
+		defineSwitch(&Switch3SP);
+		defineSwitch(&Switch4SP);
+	}
+	else
+	{
+		// We're disconnected
+		deleteProperty(Switch1SP.name);
+		deleteProperty(Switch2SP.name);
+		deleteProperty(Switch3SP.name);
+		deleteProperty(Switch4SP.name);
+	}
+	return true;
 }
+
 void IndiAstroberryRelays::ISGetProperties(const char *dev)
 {
-    INDI::DefaultDevice::ISGetProperties(dev);
+	INDI::DefaultDevice::ISGetProperties(dev);
 }
+
 bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n)
 {
 	// first we check if it's for our device
 	if(strcmp(dev,getDeviceName())==0)
 	{
-        // handle BCMpins
-        if (!strcmp(name, BCMpinsNP.name))
-        {
+	        // handle BCMpins
+	        if (!strcmp(name, BCMpinsNP.name))
+	        {
 			unsigned int valcount = 4;
 
 			if (isConnected())
@@ -230,7 +233,7 @@ bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, doubl
 
 					// Verify unique BCM Pin assignement
 					for (unsigned j = i + 1; j < valcount; j++)
-					{					
+					{
 						if ( values[i] == values[j] )
 						{
 							BCMpinsNP.s=IPS_ALERT;
@@ -268,7 +271,7 @@ bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, doubl
 				DEBUGF(INDI::Logger::DBG_SESSION, "Astroberry Relays BCM Pins set to Relay1: BCM%0.0f, Relay2: BCM%0.0f, Relay3: BCM%0.0f, Relay4: BCM%0.0f", BCMpinsN[0].value, BCMpinsN[1].value, BCMpinsN[2].value, BCMpinsN[3].value);
 				return true;
 			}
-        }
+        	}
 	}
 
 	return INDI::DefaultDevice::ISNewNumber(dev,name,values,names,n);
@@ -276,8 +279,8 @@ bool IndiAstroberryRelays::ISNewNumber (const char *dev, const char *name, doubl
 bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
 	// first we check if it's for our device
-    if (!strcmp(dev, getDeviceName()))
-    {
+	if (!strcmp(dev, getDeviceName()))
+	{
 		// handle relay 1
 		if (!strcmp(name, Switch1SP.name))
 		{
@@ -390,7 +393,7 @@ bool IndiAstroberryRelays::ISNewBLOB (const char *dev, const char *name, int siz
 }
 bool IndiAstroberryRelays::ISSnoopDevice(XMLEle *root)
 {
-    return INDI::DefaultDevice::ISSnoopDevice(root);
+	return INDI::DefaultDevice::ISSnoopDevice(root);
 }
 bool IndiAstroberryRelays::saveConfigItems(FILE *fp)
 {
@@ -400,5 +403,5 @@ bool IndiAstroberryRelays::saveConfigItems(FILE *fp)
 	IUSaveConfigSwitch(fp, &Switch3SP);
 	IUSaveConfigSwitch(fp, &Switch4SP);
 
-    return true;
+	return true;
 }
