@@ -7,7 +7,7 @@ Astroberry DIY provides the INDI drivers for Raspberry Pi devices:
 Features:
 * Astroberry Focuser
   - Support for virtually any stepper motor, including Moonlite, Robofocus
-  - Support for DRV8834 and DRV8834 stepper controllers
+  - Support for DRV8834 and A4988 stepper controllers
   - Direct stepper motor control without proprietary drivers
   - Customizable GPIO pins
   - Absolute position control
