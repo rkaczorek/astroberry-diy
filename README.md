@@ -64,13 +64,13 @@ sudo copy indi_astroberry_system.xml /usr/share/indi/
 ```
 
 # How to use it?
-Enable 1-Wire interface using raspi-config or adding 'dtoverlay=w1-gpio' to /boot/configure.txt for temperature compensation support (reboot required).
-Run Kstars and select Astroberry Focuser (Focuser section) and/or Astroberry Relays (Aux section) and/or Astroberry System (Aux section) in Ekos profile editor.
-Then start INDI server in Ekos with your profile, containg Astroberry drivers. Alternatively you can start INDI server manually by running:
+Enable 1-Wire interface using raspi-config or adding 'dtoverlay=w1-gpio' to /boot/configure.txt for temperature compensation support (reboot required). Run Kstars and select Astroberry Focuser (Focuser section) and/or Astroberry Relays (Aux section) and/or Astroberry System (Aux section) in Ekos profile editor. Then start INDI server in Ekos with your profile, containg Astroberry drivers. Alternatively you can start INDI server manually by running:
 ```
 indi_server indi_astroberry_focuser indi_astroberry_relays indi_astroberry_system
 ```
 Start KStars with Ekos, connect to your INDI server and enjoy!
+
+Note that your user account needs proper access right to /dev/gpiochip0 device. By default you can read/write only if you run driver as root or user who is a member of gpio group. Add your user to gpio group by running ```sudo usermod -a -G gpio $USER```
 
 # What hardware is needed for Astroberry DIY drivers?
 
