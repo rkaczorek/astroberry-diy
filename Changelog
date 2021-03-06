@@ -1,3 +1,6 @@
+v2.7
+* Active state control added to relays
+
 v2.6
 * Major changes and new functionalities added
   - added: Support for DS18B20 temperature sensor added

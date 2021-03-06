@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2014 Radek Kaczorek  <rkaczorek AT gmail DOT com>
+  Copyright(c) 2015-2021 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -54,8 +54,10 @@ private:
 	ISwitchVectorProperty Switch3SP;
 	ISwitch Switch4S[2];
 	ISwitchVectorProperty Switch4SP;
+	ISwitch ActiveStateS[2];
+	ISwitchVectorProperty ActiveStateSP;
 
-	int counter;
+	int activeState = 0;
 
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_relay1;

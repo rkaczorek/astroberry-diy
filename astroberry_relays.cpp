@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2015-2020 Radek Kaczorek  <rkaczorek AT gmail DOT com>
+  Copyright(c) 2015-2021 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -115,10 +115,10 @@ bool IndiAstroberryRelays::Connect()
 	gpio_relay4 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
 
 	// Set initial gpios direction and default states
-	gpiod_line_request_output(gpio_relay1, "1@astroberry_relays", 1);
-	gpiod_line_request_output(gpio_relay2, "2@astroberry_relays", 1);
-	gpiod_line_request_output(gpio_relay3, "3@astroberry_relays", 1);
-	gpiod_line_request_output(gpio_relay4, "4@astroberry_relays", 1);
+	gpiod_line_request_output(gpio_relay1, "1@astroberry_relays", !activeState);
+	gpiod_line_request_output(gpio_relay2, "2@astroberry_relays", !activeState);
+	gpiod_line_request_output(gpio_relay3, "3@astroberry_relays", !activeState);
+	gpiod_line_request_output(gpio_relay4, "4@astroberry_relays", !activeState);
 
 	// Lock BCM Pins setting
 	BCMpinsNP.s=IPS_BUSY;
@@ -170,8 +170,14 @@ bool IndiAstroberryRelays::initProperties()
 	IUFillNumber(&BCMpinsN[3], "BCMPIN04", "Relay 4", "%0.0f", 1, 27, 0, 19); // BCM19 = PIN35
 	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 4, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
+	IUFillSwitch(&ActiveStateS[0], "ACTIVELO", "Low", ISS_ON);
+	IUFillSwitch(&ActiveStateS[1], "ACTIVEHI", "High", ISS_OFF);
+	IUFillSwitchVector(&ActiveStateSP, ActiveStateS, 2, getDeviceName(), "ACTIVESTATE", "Active State", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+
+
 	// Load BCM Pins
-	defineNumber(&BCMpinsNP);	
+	defineNumber(&BCMpinsNP);
+	defineSwitch(&ActiveStateSP);
 	loadConfig();
 
 	return true;
@@ -281,6 +287,31 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 	// first we check if it's for our device
 	if (!strcmp(dev, getDeviceName()))
 	{
+		// handle active state
+		if (!strcmp(name, ActiveStateSP.name))
+		{
+			IUUpdateSwitch(&ActiveStateSP, states, names, n);
+
+			if ( ActiveStateS[0].s == ISS_ON )
+			{
+				activeState = 0;
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays active state set to LOW");
+				ActiveStateSP.s = IPS_OK;
+				ActiveStateS[1].s = ISS_OFF;
+				IDSetSwitch(&ActiveStateSP, NULL);
+				return true;
+			}
+			if ( ActiveStateS[1].s == ISS_ON )
+			{
+				activeState = 1;
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays active state set to HIGH");
+				ActiveStateSP.s = IPS_IDLE;
+				ActiveStateS[0].s = ISS_OFF;
+				IDSetSwitch(&ActiveStateSP, NULL);
+				return true;
+			}
+		}
+
 		// handle relay 1
 		if (!strcmp(name, Switch1SP.name))
 		{
@@ -288,7 +319,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 
 			if ( Switch1S[0].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay1, 0);
+				gpiod_line_set_value(gpio_relay1, activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #1 set to ON");
 				Switch1SP.s = IPS_OK;
 				Switch1S[1].s = ISS_OFF;
@@ -297,7 +328,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			}
 			if ( Switch1S[1].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay1, 1);
+				gpiod_line_set_value(gpio_relay1, !activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #1 set to OFF");
 				Switch1SP.s = IPS_IDLE;
 				Switch1S[0].s = ISS_OFF;
@@ -313,7 +344,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 
 			if ( Switch2S[0].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay2, 0);
+				gpiod_line_set_value(gpio_relay2, activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #2 set to ON");
 				Switch2SP.s = IPS_OK;
 				Switch2S[1].s = ISS_OFF;
@@ -322,7 +353,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			}
 			if ( Switch2S[1].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay2, 1);
+				gpiod_line_set_value(gpio_relay2, !activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #2 set to OFF");
 				Switch2SP.s = IPS_IDLE;
 				Switch2S[0].s = ISS_OFF;
@@ -338,7 +369,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 
 			if ( Switch3S[0].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay3, 0);
+				gpiod_line_set_value(gpio_relay3, activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #3 set to ON");
 				Switch3SP.s = IPS_OK;
 				Switch3S[1].s = ISS_OFF;
@@ -347,7 +378,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			}
 			if ( Switch3S[1].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay3, 1);
+				gpiod_line_set_value(gpio_relay3, !activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #3 set to OFF");
 				Switch3SP.s = IPS_IDLE;
 				Switch3S[0].s = ISS_OFF;
@@ -363,7 +394,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 
 			if ( Switch4S[0].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay4, 0);
+				gpiod_line_set_value(gpio_relay4, activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #4 set to ON");
 				Switch4SP.s = IPS_OK;
 				Switch4S[1].s = ISS_OFF;
@@ -372,7 +403,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			}
 			if ( Switch4S[1].s == ISS_ON )
 			{
-				gpiod_line_set_value(gpio_relay4, 1);
+				gpiod_line_set_value(gpio_relay4, !activeState);
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Relays #4 set to OFF");
 				Switch4SP.s = IPS_IDLE;
 				Switch4S[0].s = ISS_OFF;
@@ -398,6 +429,7 @@ bool IndiAstroberryRelays::ISSnoopDevice(XMLEle *root)
 bool IndiAstroberryRelays::saveConfigItems(FILE *fp)
 {
 	IUSaveConfigNumber(fp, &BCMpinsNP);
+	IUSaveConfigSwitch(fp, &ActiveStateSP);
 	IUSaveConfigSwitch(fp, &Switch1SP);
 	IUSaveConfigSwitch(fp, &Switch2SP);
 	IUSaveConfigSwitch(fp, &Switch3SP);

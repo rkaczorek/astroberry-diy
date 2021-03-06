@@ -24,6 +24,7 @@ Features:
   - Support for virtually any relay controlled from GPIO
   - Up to 4 relays switches
   - Customizable GPIO pins
+  - Configurable Active state
 * Astroberry System
   - Provides system information such as local system time, UTC offset, hardware identification, uptime, system load, hostname, local IP, public IP
 

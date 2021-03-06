@@ -1,3 +1,9 @@
+indi-astroberry-diy (2.7) buster; urgency=medium
+
+  * Active state control added to relays
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sat, 06 Mar 2021 13:29:07 +0100
+
 indi-astroberry-diy (2.6.4) buster; urgency=medium
 
   * Fixing backlash
