@@ -2,7 +2,7 @@
 Astroberry DIY provides the INDI drivers for Raspberry Pi devices:
 * Astroberry Focuser - stepper motor driver with absolute and relative position capabilities and autofocus with INDI client such as KStars and Ekos
 * Astroberry Relays - relays switch board allowing for remote switching up to 4 devices
-* Astroberry System - system parameters monitoring
+* Astroberry System - system parameters monitoring and system control
 
 Features:
 * Astroberry Focuser
@@ -22,11 +22,13 @@ Features:
   - Automatic temperature compensation based on DS18B20 temperature sensor
 * Astroberry Relays
   - Support for virtually any relay controlled from GPIO
-  - Up to 4 relays switches
+  - Up to 8 relay switches
   - Customizable GPIO pins
   - Configurable Active state
+  - Configurable labels
 * Astroberry System
-  - Provides system information such as local system time, UTC offset, hardware identification, uptime, system load, hostname, local IP, public IP
+  - Provides system information such as local system time, UTC offset, hardware identification, CPU temperature, uptime, system load, hostname, local IP, public IP
+  - Allows for system restart and shut down (Supported on linux operating system only. Requires advanced configuration of sudo to allow restart & shutdown without password)
 
 # Source
 https://github.com/rkaczorek/astroberry-diy
@@ -36,7 +38,14 @@ https://github.com/rkaczorek/astroberry-diy
 * CMake >= 2.4.7
 
 # Installation
-You need to download and install required libraries before compiling Astroberry DIY. See [INDI site](http://indilib.org/download.html) for more details.
+If you use [astroberry software repository](https://www.astroberry.io/repo/) just run:
+```
+sudo apt-get install indi-astroberry-diy
+```
+
+Otherwide you need to compile the software from sources.
+
+Download and install required libraries before compiling Astroberry DIY. See [INDI site](http://indilib.org/download.html) for more details.
 In most cases it's enough to run:
 ```
 sudo apt-get install cmake libindi-dev libgpiod-dev
@@ -73,6 +82,13 @@ Start KStars with Ekos, connect to your INDI server and enjoy!
 
 Note that your user account needs proper access right to /dev/gpiochip0 device. By default you can read/write only if you run driver as root or user who is a member of gpio group. Add your user to gpio group by running ```sudo usermod -a -G gpio $USER```
 
+To use restart/shutdown functionality add this line to your /etc/sudoers file or /etc/sudoers.d/010_astroberry-nopasswd (this assumes you run INDI server as astroberry user):
+```
+astroberry ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/poweroff
+```
+
+For custom labels you need to save configuration and restart the driver after changing relays' labels.
+
 # What hardware is needed for Astroberry DIY drivers?
 
 1. Astroberry Focuser
@@ -101,11 +117,15 @@ Note that your user account needs proper access right to /dev/gpiochip0 device. 
    Note: You need to use external 4k7 ohm pull-up resistor connected to data pin of DS18B20 sensor
 
 2. Astroberry Relays
-* Relay switch board eg. YwRobot 4 relay
+* Relay switch board eg. Waveshare RPi Relay Board (B)
   Default pins, each switching ON/OFF a relay (active-low). Starting from version 2.5 you can set your own BCM Pins on Options Tab!
    - BCM05 / PIN29 - IN1
    - BCM06 / PIN31 - IN2
    - BCM13 / PIN33 - IN3
-   - BCM19 / PIN35 - IN4
+   - BCM16 / PIN36 - IN4
+   - BCM19 / PIN35 - IN5
+   - BCM20 / PIN38 - IN6
+   - BCM21 / PIN40 - IN7
+   - BCM26 / PIN37 - IN8
 
    Note: All inputs are set to HIGH by default. Most relay boards require input to be LOW to swich ON a line.

@@ -99,6 +99,39 @@ bool IndiAstroberrySystem::Connect()
 {
 	SetTimer(1000);
 	IDMessage(getDeviceName(), "Astroberry System connected successfully.");
+
+	// Get basic system info
+	FILE* pipe;
+	char buffer[128];
+
+	//update Hardware
+	//https://www.raspberrypi.org/documentation/hardware/raspberrypi/revision-codes/README.md
+	pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[0], buffer);
+
+	//update Hostname
+	pipe = popen("hostname", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[4], buffer);
+
+	//update Local IP
+	pipe = popen("hostname -I|awk -F' '  '{print $1}'|xargs", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[5], buffer);
+
+	//update Public IP
+	pipe = popen("wget -qO- http://ipecho.net/plain|xargs", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[6], buffer);
+
+	// Update client
+	IDSetText(&SysInfoTP, NULL);
+
 	return true;
 }
 bool IndiAstroberrySystem::Disconnect()
@@ -129,17 +162,23 @@ void IndiAstroberrySystem::TimerHit()
 		FILE* pipe;
 		char buffer[128];
 
+		//update CPU temp
+		pipe = popen("echo $(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))", "r");
+		fgets(buffer, 128, pipe);
+		pclose(pipe);
+		IUSaveText(&SysInfoT[1], buffer);
+
 		//update uptime
 		pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'|xargs", "r");
 		fgets(buffer, 128, pipe);
 		pclose(pipe);
-		IUSaveText(&SysInfoT[1], buffer);
+		IUSaveText(&SysInfoT[2], buffer);
 
 		//update load
 		pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'|xargs", "r");
 		fgets(buffer, 128, pipe);
 		pclose(pipe);
-		IUSaveText(&SysInfoT[2], buffer);
+		IUSaveText(&SysInfoT[3], buffer);
 
 		SysInfoTP.s = IPS_OK;
 		IDSetText(&SysInfoTP, NULL);
@@ -163,45 +202,21 @@ bool IndiAstroberrySystem::initProperties()
 	IUFillTextVector(&SysTimeTP,SysTimeT,2,getDeviceName(),"SYSTEM_TIME","System Time",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
 	IUFillText(&SysInfoT[0],"HARDWARE","Hardware",NULL);
-	IUFillText(&SysInfoT[1],"UPTIME","Uptime (hh:mm)",NULL);
-	IUFillText(&SysInfoT[2],"LOAD","Load (1 / 5 / 15 min.)",NULL);
-	IUFillText(&SysInfoT[3],"HOSTNAME","Hostname",NULL);
-	IUFillText(&SysInfoT[4],"LOCAL_IP","Local IP",NULL);
-	IUFillText(&SysInfoT[5],"PUBLIC_IP","Public IP",NULL);
-	IUFillTextVector(&SysInfoTP,SysInfoT,6,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
+	IUFillText(&SysInfoT[1],"CPU TEMP","CPU Temp (°C)",NULL);
+	IUFillText(&SysInfoT[2],"UPTIME","Uptime (hh:mm)",NULL);
+	IUFillText(&SysInfoT[3],"LOAD","Load (1 / 5 / 15 min.)",NULL);
+	IUFillText(&SysInfoT[4],"HOSTNAME","Hostname",NULL);
+	IUFillText(&SysInfoT[5],"LOCAL_IP","Local IP",NULL);
+	IUFillText(&SysInfoT[6],"PUBLIC_IP","Public IP",NULL);
+	IUFillTextVector(&SysInfoTP,SysInfoT,7,getDeviceName(),"SYSTEM_INFO","System Info",MAIN_CONTROL_TAB,IP_RO,60,IPS_IDLE);
 
-	// Get basic system info
-	FILE* pipe;
-	char buffer[128];
+	IUFillSwitch(&SysControlS[0], "SYSCTRL_REBOOT", "Reboot", ISS_OFF);
+	IUFillSwitch(&SysControlS[1], "SYSCTRL_SHUTDOWN", "Shutdown", ISS_OFF);
+	IUFillSwitchVector(&SysControlSP, SysControlS, 2, getDeviceName(), "SYSCTRL", "System Ctrl", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
-	//update Hardware
-	//https://www.raspberrypi.org/documentation/hardware/raspberrypi/revision-codes/README.md
-	pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
-	fgets(buffer, 128, pipe);
-	pclose(pipe);
-	IUSaveText(&SysInfoT[0], buffer);
-	//IUSaveText(&SysInfoT[0], getHardwareRev());
-
-	//update Hostname
-	pipe = popen("hostname", "r");
-	fgets(buffer, 128, pipe);
-	pclose(pipe);
-	IUSaveText(&SysInfoT[3], buffer);
-
-	//update Local IP
-	pipe = popen("hostname -I|awk -F' '  '{print $1}'|xargs", "r");
-	fgets(buffer, 128, pipe);
-	pclose(pipe);
-	IUSaveText(&SysInfoT[4], buffer);
-
-	//update Public IP
-	pipe = popen("wget -qO- http://ipecho.net/plain|xargs", "r");
-	fgets(buffer, 128, pipe);
-	pclose(pipe);
-	IUSaveText(&SysInfoT[5], buffer);
-
-	// Update client
-	IDSetText(&SysInfoTP, NULL);
+	IUFillSwitch(&SysOpConfirmS[0], "SYSOPCONFIRM_CONFIRM", "Yes", ISS_OFF);
+	IUFillSwitch(&SysOpConfirmS[1], "SYSOPCONFIRM_CANCEL", "No", ISS_OFF);
+	IUFillSwitchVector(&SysOpConfirmSP, SysOpConfirmS, 2, getDeviceName(), "SYSOPCONFIRM", "Continue?", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
 	return true;
 }
@@ -215,12 +230,14 @@ bool IndiAstroberrySystem::updateProperties()
 	{
 		defineText(&SysTimeTP);
 		defineText(&SysInfoTP);
+		defineSwitch(&SysControlSP);
 	}
 	else
 	{
 		// We're disconnected
 		deleteProperty(SysTimeTP.name);
 		deleteProperty(SysInfoTP.name);
+		deleteProperty(SysControlSP.name);
 	}
 	return true;
 }
@@ -237,6 +254,103 @@ bool IndiAstroberrySystem::ISNewNumber (const char *dev, const char *name, doubl
 
 bool IndiAstroberrySystem::ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+	// first we check if it's for our device
+	if (!strcmp(dev, getDeviceName()))
+	{
+		// handle system control
+		if (!strcmp(name, SysControlSP.name))
+		{
+			IUUpdateSwitch(&SysControlSP, states, names, n);
+
+			if ( SysControlS[0].s == ISS_ON )
+			{
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry device is set to REBOOT. Confirm or Cancel operation.");
+				SysControlSP.s = IPS_BUSY;
+				IDSetSwitch(&SysControlSP, NULL);
+				
+				// confirm switch
+				defineSwitch(&SysOpConfirmSP);
+
+				return true;
+			}
+			if ( SysControlS[1].s == ISS_ON )
+			{
+				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry device is set to SHUT DOWN. Confirm or Cancel operation.");
+				SysControlSP.s = IPS_BUSY;
+				IDSetSwitch(&SysControlSP, NULL);
+
+				// confirm switch
+				defineSwitch(&SysOpConfirmSP);
+
+				return true;
+			}
+		}
+
+		// handle system control confirmation
+		if (!strcmp(name, SysOpConfirmSP.name))
+		{
+			IUUpdateSwitch(&SysOpConfirmSP, states, names, n);
+
+			if ( SysOpConfirmS[0].s == ISS_ON )
+			{
+				SysOpConfirmSP.s = IPS_IDLE;
+				IDSetSwitch(&SysOpConfirmSP, NULL);
+				SysOpConfirmS[0].s = ISS_OFF;
+				IDSetSwitch(&SysOpConfirmSP, NULL);
+
+				// execute system operation
+				if (SysControlS[0].s == ISS_ON)
+				{
+					DEBUG(INDI::Logger::DBG_SESSION, "System operation confirmed. System is going to REBOOT now");
+					FILE* pipe;
+					char buffer[512];
+					pipe = popen("sudo reboot", "r");
+					fgets(buffer, 512, pipe);
+					pclose(pipe);
+					DEBUGF(INDI::Logger::DBG_SESSION, "System output: %s", buffer);
+				}
+				if (SysControlS[1].s == ISS_ON)
+				{
+					DEBUG(INDI::Logger::DBG_SESSION, "System operation confirmed. System is going to SHUT DOWN now");
+					FILE* pipe;
+					char buffer[512];
+					pipe = popen("sudo poweroff", "r");
+					fgets(buffer, 512, pipe);
+					pclose(pipe);
+					DEBUGF(INDI::Logger::DBG_SESSION, "System output: %s", buffer);
+				}
+
+				// reset system control buttons
+				SysControlSP.s = IPS_IDLE;
+				IDSetSwitch(&SysControlSP, NULL);
+				SysControlS[0].s = ISS_OFF;
+				SysControlS[1].s = ISS_OFF;
+				IDSetSwitch(&SysControlSP, NULL);
+
+				deleteProperty(SysOpConfirmSP.name);
+				return true;
+			}
+
+			if ( SysOpConfirmS[1].s == ISS_ON )
+			{
+				DEBUG(INDI::Logger::DBG_SESSION, "System operation canceled.");
+				SysOpConfirmSP.s = IPS_IDLE;
+				IDSetSwitch(&SysOpConfirmSP, NULL);
+				SysOpConfirmS[1].s = ISS_OFF;
+				IDSetSwitch(&SysOpConfirmSP, NULL);
+
+				// reset system control buttons
+				SysControlSP.s = IPS_IDLE;
+				IDSetSwitch(&SysControlSP, NULL);
+				SysControlS[0].s = ISS_OFF;
+				SysControlS[1].s = ISS_OFF;
+				IDSetSwitch(&SysControlSP, NULL);
+
+				deleteProperty(SysOpConfirmSP.name);
+				return true;
+			}
+		}
+	}
 	return INDI::DefaultDevice::ISNewSwitch (dev, name, states, names, n);
 }
 
@@ -254,81 +368,3 @@ bool IndiAstroberrySystem::ISSnoopDevice(XMLEle *root)
 {
 	return INDI::DefaultDevice::ISSnoopDevice(root);
 }
-/*
-const char * IndiAstroberrySystem::getHardwareRev()
-{
-	FILE* pipe;
-	char buffer[128];
-
-	pipe = popen("cat /proc/cpuinfo|grep Revision|awk -F: '{print $2}'|xargs", "r");
-	fgets(buffer, 128, pipe);
-	pclose(pipe);
-
-	int hex = strtol(buffer,NULL, 16);
-
-	switch(hex)
-	{
-		case 0x0007:
-		case 0x0008:
-		case 0x0009:
-			return (char *) "Raspberry Pi Model A";
-			break;
-		case 0x0012:
-		case 0x0015:
-			return (char *) "Raspberry Pi Model A+";
-			break;
-		case 0x0002:
-		case 0x0003:
-			return (char *) "Raspberry Pi Model B Rev 1";
-			break;
-		case 0x0004:
-		case 0x0005:
-		case 0x0006:
-		case 0x000d:
-		case 0x000e:
-		case 0x000f:
-			return (char *) "Raspberry Pi Model B Rev 2";
-			break;
-		case 0x0010:
-		case 0x0013:
-		case 0x900032:
-			return (char *) "Raspberry Pi Model B+";
-			break;
-		case 0x0011:
-		case 0x0014:
-			return (char *) "Raspberry Pi Compute Module";
-			break;
-		case 0xa01041:
-		case 0xa21041:
-			return (char *) "Raspberry Pi 2 Model B v1.1";
-			break;
-		case 0xa22042:
-			return (char *) "Raspberry Pi 2 Model B v1.2";
-			break;
-		case 0x900092:
-			return (char *) "Raspberry Pi Zero v1.2";
-			break;
-		case 0x900093:
-			return (char *) "Raspberry Pi Zero v1.3";
-			break;
-		case 0x9000c1:
-			return (char *) "Raspberry Pi Zero W";
-			break;
-		case 0xa02082:
-		case 0xa22082:
-			return (char *) "Raspberry Pi 3 Model B";
-			break;
-		case 0xa020d3:
-			return (char *) "Raspberry Pi 3 Model B+";
-			break;
-		case 0xa03111:
-		case 0xb03111:
-		case 0xc03111:
-			return (char *) "Raspberry Pi 4";
-			break;
-		default:
-			return (char *) "unknown";
-			break;
-	}
-}
-*/

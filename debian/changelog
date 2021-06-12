@@ -1,3 +1,13 @@
+indi-astroberry-diy (2.8) buster; urgency=medium
+
+  * Handle up to 8 relays
+  * Added CPU Temperature
+  * Added system control buttons
+  * Added configurable relays' labels
+  * Fixed switching all relays off while reconnecting
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Sun, 13 Jun 2021 00:57:56 +0200
+
 indi-astroberry-diy (2.7) buster; urgency=medium
 
   * Active state control added to relays

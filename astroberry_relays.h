@@ -41,11 +41,21 @@ public:
 	virtual bool ISSnoopDevice(XMLEle *root);
 protected:
 	virtual bool saveConfigItems(FILE *fp);
+	virtual void TimerHit();
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	INumber BCMpinsN[4];
+	virtual void udateSwitches();
+
+	INumber BCMpinsN[8];
 	INumberVectorProperty BCMpinsNP;
+	ISwitch ActiveStateS[2];
+	ISwitchVectorProperty ActiveStateSP;
+	IText RelayLabelsT[8];
+	ITextVectorProperty RelayLabelsTP;
+
+	ISwitch MasterSwitchS[2];
+	ISwitchVectorProperty MasterSwitchSP;
 	ISwitch Switch1S[2];
 	ISwitchVectorProperty Switch1SP;
 	ISwitch Switch2S[2];
@@ -54,16 +64,32 @@ private:
 	ISwitchVectorProperty Switch3SP;
 	ISwitch Switch4S[2];
 	ISwitchVectorProperty Switch4SP;
-	ISwitch ActiveStateS[2];
-	ISwitchVectorProperty ActiveStateSP;
+	ISwitch Switch5S[2];
+	ISwitchVectorProperty Switch5SP;
+	ISwitch Switch6S[2];
+	ISwitchVectorProperty Switch6SP;
+	ISwitch Switch7S[2];
+	ISwitchVectorProperty Switch7SP;
+	ISwitch Switch8S[2];
+	ISwitchVectorProperty Switch8SP;
+
+	//ILight SwitchStatusL[8];
+	//ILightVectorProperty SwitchStatusLP;
 
 	int activeState = 0;
+	int relayState[8]; // relayState is mission critical to maintain relays status between reconnections. initially set to !activeState
+	int pollingTime = 1000;
 
+	const char* gpio_chip_path = "/dev/gpiochip0";
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_relay1;
 	struct gpiod_line *gpio_relay2;
 	struct gpiod_line *gpio_relay3;
 	struct gpiod_line *gpio_relay4;
+	struct gpiod_line *gpio_relay5;
+	struct gpiod_line *gpio_relay6;
+	struct gpiod_line *gpio_relay7;
+	struct gpiod_line *gpio_relay8;
 };
 
 #endif

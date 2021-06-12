@@ -44,12 +44,15 @@ protected:
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	//virtual const char *getHardwareRev();
 
 	IText SysTimeT[2];
 	ITextVectorProperty SysTimeTP;
-	IText SysInfoT[6];
+	IText SysInfoT[7];
 	ITextVectorProperty SysInfoTP;
+	ISwitch SysControlS[2];
+	ISwitchVectorProperty SysControlSP;
+	ISwitch SysOpConfirmS[2];
+	ISwitchVectorProperty SysOpConfirmSP;
 };
 
 #endif

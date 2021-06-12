@@ -1,3 +1,10 @@
+v2.8
+* Handle up to 8 relays
+* added: CPU Temperature to system monitor
+* added: system control buttons
+* added: configurable relays' labels
+* fixed: switching all relays off while reconnecting
+
 v2.7
 * Active state control added to relays
 
