@@ -133,7 +133,7 @@ bool IndiAstroberryRelays::Connect()
 	// Lock BCM Pins setting
 	BCMpinsNP.s = IPS_BUSY;
 	IDSetNumber(&BCMpinsNP, nullptr);
-	
+
 	// Lock Active State setting
 	ActiveStateSP.s = IPS_BUSY;
 	IDSetSwitch(&ActiveStateSP, nullptr);
@@ -188,14 +188,14 @@ bool IndiAstroberryRelays::initProperties()
 	IUFillNumber(&BCMpinsN[7], "BCMPIN08", "Relay 8", "%0.0f", 1, 27, 0, 26); // BCM26 = PIN37
 	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 8, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
-	IUFillText(&RelayLabelsT[0], "RELAYLABEL01", "Relay 1", "Relay 1"); 
-	IUFillText(&RelayLabelsT[1], "RELAYLABEL02", "Relay 2", "Relay 2"); 
-	IUFillText(&RelayLabelsT[2], "RELAYLABEL03", "Relay 3", "Relay 3"); 
-	IUFillText(&RelayLabelsT[3], "RELAYLABEL04", "Relay 4", "Relay 4"); 
-	IUFillText(&RelayLabelsT[4], "RELAYLABEL05", "Relay 5", "Relay 5"); 
-	IUFillText(&RelayLabelsT[5], "RELAYLABEL06", "Relay 6", "Relay 6"); 
-	IUFillText(&RelayLabelsT[6], "RELAYLABEL07", "Relay 7", "Relay 7"); 
-	IUFillText(&RelayLabelsT[7], "RELAYLABEL08", "Relay 8", "Relay 8"); 
+	IUFillText(&RelayLabelsT[0], "RELAYLABEL01", "Relay 1", "Relay 1");
+	IUFillText(&RelayLabelsT[1], "RELAYLABEL02", "Relay 2", "Relay 2");
+	IUFillText(&RelayLabelsT[2], "RELAYLABEL03", "Relay 3", "Relay 3");
+	IUFillText(&RelayLabelsT[3], "RELAYLABEL04", "Relay 4", "Relay 4");
+	IUFillText(&RelayLabelsT[4], "RELAYLABEL05", "Relay 5", "Relay 5");
+	IUFillText(&RelayLabelsT[5], "RELAYLABEL06", "Relay 6", "Relay 6");
+	IUFillText(&RelayLabelsT[6], "RELAYLABEL07", "Relay 7", "Relay 7");
+	IUFillText(&RelayLabelsT[7], "RELAYLABEL08", "Relay 8", "Relay 8");
 	IUFillTextVector(&RelayLabelsTP, RelayLabelsT, 8, getDeviceName(), "RELAYLABELS", "Relay Labels", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
 
 	IUFillSwitch(&ActiveStateS[0], "ACTIVELO", "Low", ISS_ON);
@@ -272,7 +272,6 @@ bool IndiAstroberryRelays::updateProperties()
 	if (isConnected())
 	{
 		// We're connected
-		defineSwitch(&MasterSwitchSP);
 		defineSwitch(&Switch1SP);
 		defineSwitch(&Switch2SP);
 		defineSwitch(&Switch3SP);
@@ -281,12 +280,12 @@ bool IndiAstroberryRelays::updateProperties()
 		defineSwitch(&Switch6SP);
 		defineSwitch(&Switch7SP);
 		defineSwitch(&Switch8SP);
+		defineSwitch(&MasterSwitchSP);
 		//defineLight(&SwitchStatusLP);
 	}
 	else
 	{
 		// We're disconnected
-		deleteProperty(MasterSwitchSP.name);
 		deleteProperty(Switch1SP.name);
 		deleteProperty(Switch2SP.name);
 		deleteProperty(Switch3SP.name);
@@ -295,6 +294,7 @@ bool IndiAstroberryRelays::updateProperties()
 		deleteProperty(Switch6SP.name);
 		deleteProperty(Switch7SP.name);
 		deleteProperty(Switch8SP.name);
+		deleteProperty(MasterSwitchSP.name);
 		//deleteProperty(SwitchStatusLP.name);
 	}
 	return true;
