@@ -111,6 +111,24 @@ bool IndiAstroberrySystem::Connect()
 	pclose(pipe);
 	IUSaveText(&SysInfoT[0], buffer);
 
+	//update CPU temp
+	pipe = popen("echo $(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[1], buffer);
+
+	//update uptime
+	pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'|xargs", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[2], buffer);
+
+	//update load
+	pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'|xargs", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+	IUSaveText(&SysInfoT[3], buffer);
+
 	//update Hostname
 	pipe = popen("hostname", "r");
 	fgets(buffer, 128, pipe);
@@ -156,32 +174,37 @@ void IndiAstroberrySystem::TimerHit()
 		SysTimeTP.s = IPS_OK;
 		IDSetText(&SysTimeTP, NULL);
 
-		SysInfoTP.s = IPS_BUSY;
-		IDSetText(&SysInfoTP, NULL);
+		if (polling++ > 59)
+		{
+			FILE* pipe;
+			char buffer[128];
 
-		FILE* pipe;
-		char buffer[128];
+			SysInfoTP.s = IPS_BUSY;
+			IDSetText(&SysInfoTP, NULL);
 
-		//update CPU temp
-		pipe = popen("echo $(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))", "r");
-		fgets(buffer, 128, pipe);
-		pclose(pipe);
-		IUSaveText(&SysInfoT[1], buffer);
+			//update CPU temp
+			pipe = popen("echo $(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[1], buffer);
 
-		//update uptime
-		pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'|xargs", "r");
-		fgets(buffer, 128, pipe);
-		pclose(pipe);
-		IUSaveText(&SysInfoT[2], buffer);
+			//update uptime
+			pipe = popen("uptime|awk -F, '{print $1}'|awk -Fup '{print $2}'|xargs", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[2], buffer);
 
-		//update load
-		pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'|xargs", "r");
-		fgets(buffer, 128, pipe);
-		pclose(pipe);
-		IUSaveText(&SysInfoT[3], buffer);
+			//update load
+			pipe = popen("uptime|awk -F, '{print $3\" /\"$4\" /\"$5}'|awk -F: '{print $2}'|xargs", "r");
+			fgets(buffer, 128, pipe);
+			pclose(pipe);
+			IUSaveText(&SysInfoT[3], buffer);
 
-		SysInfoTP.s = IPS_OK;
-		IDSetText(&SysInfoTP, NULL);
+			SysInfoTP.s = IPS_OK;
+			IDSetText(&SysInfoTP, NULL);
+
+			polling = 0;
+		}
 
 		SetTimer(1000);
 	}

@@ -1,3 +1,10 @@
+indi-astroberry-diy (2.9) buster; urgency=medium
+
+  * Master switch removed from relays (security)
+  * System info improved
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Wed, 04 Aug 2021 16:42:35 +0200
+
 indi-astroberry-diy (2.8) buster; urgency=medium
 
   * Handle up to 8 relays

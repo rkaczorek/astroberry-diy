@@ -54,8 +54,6 @@ private:
 	IText RelayLabelsT[8];
 	ITextVectorProperty RelayLabelsTP;
 
-	ISwitch MasterSwitchS[2];
-	ISwitchVectorProperty MasterSwitchSP;
 	ISwitch Switch1S[2];
 	ISwitchVectorProperty Switch1SP;
 	ISwitch Switch2S[2];
@@ -72,6 +70,8 @@ private:
 	ISwitchVectorProperty Switch7SP;
 	ISwitch Switch8S[2];
 	ISwitchVectorProperty Switch8SP;
+	//ISwitch MasterSwitchS[2];
+	//ISwitchVectorProperty MasterSwitchSP;
 
 	//ILight SwitchStatusL[8];
 	//ILightVectorProperty SwitchStatusLP;

@@ -1,3 +1,7 @@
+v2.9
+* Master switch removed for security reasons
+* System info update routine improved
+
 v2.8
 * Handle up to 8 relays
 * added: CPU Temperature to system monitor

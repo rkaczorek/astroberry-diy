@@ -240,12 +240,13 @@ bool IndiAstroberryRelays::initProperties()
 	IUFillSwitch(&Switch8S[0], "SW8ON", "ON", ISS_OFF);
 	IUFillSwitch(&Switch8S[1], "SW8OFF", "OFF", ISS_ON);
 	IUFillSwitchVector(&Switch8SP, Switch8S, 2, getDeviceName(), "SWITCH_8", RelayLabelsT[7].text, MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
-
+	/*
 	IUFillSwitch(&MasterSwitchS[0], "MASTERSWON", "ON", ISS_OFF);
 	IUFillSwitch(&MasterSwitchS[1], "MASTERSWOFF", "OFF", ISS_ON);
 	IUFillSwitchVector(&MasterSwitchSP, MasterSwitchS, 2, getDeviceName(), "MASTER_SWITCH", "ALL RELAYS", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+	*/
 
-/*
+	/*
     IUFillLight(&SwitchStatusL[0], RelayLabelsT[0].text, "", IPS_IDLE);
     IUFillLight(&SwitchStatusL[1], RelayLabelsT[1].text, "", IPS_IDLE);
     IUFillLight(&SwitchStatusL[2], RelayLabelsT[2].text, "", IPS_IDLE);
@@ -255,7 +256,7 @@ bool IndiAstroberryRelays::initProperties()
     IUFillLight(&SwitchStatusL[6], RelayLabelsT[6].text, "", IPS_IDLE);
     IUFillLight(&SwitchStatusL[7], RelayLabelsT[7].text, "", IPS_IDLE);
     IUFillLightVector(&SwitchStatusLP, SwitchStatusL, 8, getDeviceName(), "Status", "", MAIN_CONTROL_TAB, IPS_IDLE);
-*/
+	*/
 
 	// Set initial relays states to OFF
 	for (int i=0; i < 8; i++) {
@@ -280,7 +281,7 @@ bool IndiAstroberryRelays::updateProperties()
 		defineSwitch(&Switch6SP);
 		defineSwitch(&Switch7SP);
 		defineSwitch(&Switch8SP);
-		defineSwitch(&MasterSwitchSP);
+		//defineSwitch(&MasterSwitchSP);
 		//defineLight(&SwitchStatusLP);
 	}
 	else
@@ -294,7 +295,7 @@ bool IndiAstroberryRelays::updateProperties()
 		deleteProperty(Switch6SP.name);
 		deleteProperty(Switch7SP.name);
 		deleteProperty(Switch8SP.name);
-		deleteProperty(MasterSwitchSP.name);
+		//deleteProperty(MasterSwitchSP.name);
 		//deleteProperty(SwitchStatusLP.name);
 	}
 	return true;
@@ -436,8 +437,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch1SP.s = IPS_OK;
 				Switch1S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch1SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch1S[1].s == ISS_ON )
@@ -456,8 +457,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch1SP.s = IPS_IDLE;
 				Switch1S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch1SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -483,8 +484,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch2SP.s = IPS_OK;
 				Switch2S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch2SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch2S[1].s == ISS_ON )
@@ -503,8 +504,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch2SP.s = IPS_IDLE;
 				Switch2S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch2SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -530,8 +531,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch3SP.s = IPS_OK;
 				Switch3S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch3SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch3S[1].s == ISS_ON )
@@ -550,8 +551,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch3SP.s = IPS_IDLE;
 				Switch3S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch3SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -577,8 +578,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch4SP.s = IPS_OK;
 				Switch4S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch4SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch4S[1].s == ISS_ON )
@@ -597,8 +598,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch4SP.s = IPS_IDLE;
 				Switch4S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch4SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -624,8 +625,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch5SP.s = IPS_OK;
 				Switch5S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch5SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch5S[1].s == ISS_ON )
@@ -644,8 +645,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch5SP.s = IPS_IDLE;
 				Switch5S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch5SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -671,8 +672,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch6SP.s = IPS_OK;
 				Switch6S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch6SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch6S[1].s == ISS_ON )
@@ -691,8 +692,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch6SP.s = IPS_IDLE;
 				Switch6S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch6SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -718,8 +719,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch7SP.s = IPS_OK;
 				Switch7S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch7SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch7S[1].s == ISS_ON )
@@ -738,8 +739,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch7SP.s = IPS_IDLE;
 				Switch7S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch7SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
@@ -765,8 +766,8 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch8SP.s = IPS_OK;
 				Switch8S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch8SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 			if ( Switch8S[1].s == ISS_ON )
@@ -785,12 +786,13 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch8SP.s = IPS_IDLE;
 				Switch8S[0].s = ISS_OFF;
 				IDSetSwitch(&Switch8SP, NULL);
-				IUResetSwitch(&MasterSwitchSP);
-				IDSetSwitch(&MasterSwitchSP, NULL);
+				//IUResetSwitch(&MasterSwitchSP);
+				//IDSetSwitch(&MasterSwitchSP, NULL);
 				return true;
 			}
 		}
 
+		/*
 		// handle master switch
 		if (!strcmp(name, MasterSwitchSP.name))
 		{
@@ -1071,6 +1073,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				return true;
 			}
 		}
+		*/
 	}
 	return INDI::DefaultDevice::ISNewSwitch (dev, name, states, names, n);
 }
