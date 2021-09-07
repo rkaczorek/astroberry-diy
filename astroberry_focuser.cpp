@@ -32,6 +32,7 @@
 #include <fstream>
 #include <math.h>
 #include <memory>
+#include <thread>
 #include "config.h"
 
 #include <gpiod.h>
@@ -48,6 +49,7 @@ std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 #define TEMPERATURE_UPDATE_TIMEOUT (60 * 1000) // 60 sec
 #define STEPPER_STANDBY_TIMEOUT (60 * 1000) // 60 sec
 #define TEMPERATURE_COMPENSATION_TIMEOUT (60 * 1000) // 60 sec
+#define MOVING_THREAD_UPDATE_MS		500 //0,5 sec
 
 void ISPoll(void *p);
 
@@ -109,7 +111,7 @@ void ISSnoopDevice (XMLEle *root)
 AstroberryFocuser::AstroberryFocuser()
 {
 	setVersion(VERSION_MAJOR,VERSION_MINOR);
-	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE); // | FOCUSER_CAN_ABORT);
+	FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE | FOCUSER_CAN_ABORT);
 	Focuser::setSupportedConnections(CONNECTION_NONE);
 }
 
@@ -189,6 +191,13 @@ bool AstroberryFocuser::Connect()
 
 bool AstroberryFocuser::Disconnect()
 {
+	if (focuserMoving.load()) { //focuser still moving.
+		focuserMoving.store(false); //ask bg thread to terminate
+		//wait for focuser completed to become true	
+		while(!focuserCompleted.load()) {}
+		//now we can proceed
+	}
+	
 	// Close device
 	gpiod_chip_close(chip);
 
@@ -459,9 +468,11 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 
 			if ( MoveAbsFocuser(newPos) == IPS_OK )
 			{
+				/* Props/Client are to be updated when operation is completed
 				IUUpdateNumber(&FocusAbsPosNP,values,names,n);
 				FocusAbsPosNP.s=IPS_OK;
 				IDSetNumber(&FocusAbsPosNP, nullptr);
+				*/
 				return true;
 			} else {
 				return false;
@@ -791,12 +802,47 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 
 void AstroberryFocuser::TimerHit()
 {
+	//only called regularly while focuser is moving, to update Props/Client
+	
+	//still moving, update current position	
+	if (focuserMoving.load()) { 
+		FocusAbsPosN [0].value = threadFocuserAbs.load();
+		IDSetNumber(&FocusAbsPosNP, nullptr);
+		SetTimer(MOVING_THREAD_UPDATE_MS); //see you again soon
+	}
+	
+	//focuser completed: do final props/client update and some housekeeping
+	if (focuserCompleted.load()) { 
+		FocusAbsPosNP.s=IPS_OK;
+		FocusAbsPosN[0].value = threadFocuserAbs.load();
+		IDSetNumber(&FocusAbsPosNP, nullptr);
+
+		//save position to file
+		savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
+
+		// update abspos value and status
+		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
+
+		FocusAbsPosNP.s = IPS_OK;
+		IDSetNumber(&FocusAbsPosNP, nullptr);
+
+		// reset last temperature
+		lastTemperature = FocusTemperatureN[0].value; // register last temperature
+
+		// set motor standby timer
+		IERmTimer(stepperStandbyID);
+		stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);		
+	}			
 }
 
 bool AstroberryFocuser::AbortFocuser()
 {
-	// TODO
-	DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
+	if (focuserMoving.load()) {
+		focuserMoving.store(false); //flag to not continue
+		DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
+	} else {
+		DEBUG(INDI::Logger::DBG_SESSION, "Focuser wasn't moving!");	
+	}
 	return true;
 }
 
@@ -806,8 +852,91 @@ IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, int ticks)
 	return MoveAbsFocuser(targetTicks);
 }
 
+void AstroberryFocuser::movingThreadCode()
+{
+	DEBUG(INDI::Logger::DBG_DEBUG, "Moving thread starting");
+
+	// motor wake up
+	if ( gpiod_line_get_value(gpio_sleep) == 0 )
+	{
+		gpiod_line_set_value(gpio_sleep, 1);
+		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up.");
+	}
+
+	// check last motion direction for backlash triggering
+	int lastdir = gpiod_line_get_value(gpio_dir);
+
+	// set direction
+	int direction;
+	if (threadTicksToMove > 0)
+	{
+		// OUTWARD
+		gpiod_line_set_value(gpio_dir, 1);
+		direction = 1;
+	} else {
+		// INWARD
+		gpiod_line_set_value(gpio_dir, 0);
+		direction = -1;
+	}
+
+	//remove sign
+	threadTicksToMove = abs(threadTicksToMove);
+
+	// handle Reverse Motion
+	if (threadReverse) {
+		lastdir = (lastdir == 0) ? lastdir == 1 : lastdir == 0;
+		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
+	}
+
+	/* if direction changed do backlash adjustment: since we already set data
+	   and gpio, we can't interrupt backlash compensation move, to not leave 
+	   an inconsistent state. If client aborts during backlash compensation,
+	   it will be completed before aborting. */
+	if ( gpiod_line_get_value(gpio_dir) != lastdir && threadBacklash != 0)
+	{
+		DEBUGF(INDI::Logger::DBG_SESSION, "Backlash compensation by %0.0f steps.", FocusBacklashN[0].value);
+		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
+		{
+			// step on
+			gpiod_line_set_value(gpio_step, 1);
+			// wait
+			msleep(threadStepDelay);
+			// step off
+			gpiod_line_set_value(gpio_step, 0);
+			// wait
+			msleep(threadStepDelay);
+		}
+	}
+
+	DEBUGF(INDI::Logger::DBG_DEBUG, "Starting actual move: %u ticks to go", threadTicksToMove);
+	for ( int i = 0; (i < threadTicksToMove) && focuserMoving.load(); i++ )
+	{
+		// step on
+		gpiod_line_set_value(gpio_step, 1);
+		// wait
+		msleep(threadStepDelay);
+		// step off
+		gpiod_line_set_value(gpio_step, 0);
+		// wait
+		msleep(threadStepDelay);
+
+		threadFocuserAbs.fetch_add(direction); //increment position keeper
+	}
+	
+	DEBUG(INDI::Logger::DBG_DEBUG, "Completed: flagging completion");
+	focuserMoving.store(false); //having reached target or not (if someone aborted), here we're not moving anymore...
+	focuserCompleted.store(true); //...and it's time to let others know we're done.
+	
+	DEBUG(INDI::Logger::DBG_DEBUG, "Moving thread exiting");
+}
+
 IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 {
+	if (focuserMoving.load()) {
+		DEBUG(INDI::Logger::DBG_SESSION, "Focuser is moving now, refused.");
+		return IPS_BUSY;
+	}
+	
 	if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
 	{
 		DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
@@ -824,94 +953,23 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 	FocusAbsPosNP.s = IPS_BUSY;
 	IDSetNumber(&FocusAbsPosNP, nullptr);
 
-	// motor wake up
-	if ( gpiod_line_get_value(gpio_sleep) == 0 )
-	{
-		gpiod_line_set_value(gpio_sleep, 1);
-		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up.");
-	}
+	// prepare data for thread to run
+	threadFocuserAbs.store(FocusAbsPosN[0].value);
+	threadStepDelay = FocusStepDelayN[0].value;
+	threadTicksToMove = targetTicks - FocusAbsPosN[0].value;
+	threadBacklash = FocusBacklashN[0].value;
+	threadReverse = (FocusReverseS[INDI_ENABLED].s == ISS_ON);
+	
+	//set flags
+	focuserCompleted.store(false);
+	focuserMoving.store(true);
 
-	// check last motion direction for backlash triggering
-	int lastdir = gpiod_line_get_value(gpio_dir);
-
-	// set direction
-	const char* direction;
-	if (targetTicks > FocusAbsPosN[0].value)
-	{
-		// OUTWARD
-		gpiod_line_set_value(gpio_dir, 1);
-		direction = "OUTWARD";
-	} else {
-		// INWARD
-		gpiod_line_set_value(gpio_dir, 0);
-		direction = "INWARD";
-	}
-
-	// handle Reverse Motion
-	if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
-		lastdir = (lastdir == 0) ? lastdir == 1 : lastdir == 0;
-		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
-	}
-
-	// if direction changed do backlash adjustment
-	if ( gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashN[0].value != 0)
-	{
-		DEBUGF(INDI::Logger::DBG_SESSION, "Backlash compensation by %0.0f steps.", FocusBacklashN[0].value);
-		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
-		{
-			// step on
-			gpiod_line_set_value(gpio_step, 1);
-			// wait
-			msleep(FocusStepDelayN[0].value);
-			// step off
-			gpiod_line_set_value(gpio_step, 0);
-			// wait
-			msleep(FocusStepDelayN[0].value);
-		}
-	}
-
-	// process targetTicks
-	int ticks = abs(targetTicks - FocusAbsPosN[0].value);
-
-	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", direction, targetTicks);
-
-	for ( int i = 0; i < ticks; i++ )
-	{
-		// step on
-		gpiod_line_set_value(gpio_step, 1);
-		// wait
-		msleep(FocusStepDelayN[0].value);
-		// step off
-		gpiod_line_set_value(gpio_step, 0);
-		// wait
-		msleep(FocusStepDelayN[0].value);
-
-		// INWARD - count down
-		if ( direction == "INWARD" )
-			FocusAbsPosN[0].value -= 1;
-
-		// OUTWARD - count up
-		if ( direction == "OUTWARD" )
-			FocusAbsPosN[0].value += 1;
-
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-	}
-
-	//save position to file
-	savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
-
-	// update abspos value and status
-	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
-
-	FocusAbsPosNP.s = IPS_OK;
-	IDSetNumber(&FocusAbsPosNP, nullptr);
-
-	// reset last temperature
-	lastTemperature = FocusTemperatureN[0].value; // register last temperature
-
-	// set motor standby timer
-	IERmTimer(stepperStandbyID);
-	stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);
+	//start bg thread
+	std::thread mt(&AstroberryFocuser::movingThreadCode, this);
+	mt.detach(); //let it go without us...
+	
+	//enable timer to update UI regularly
+	SetTimer(MOVING_THREAD_UPDATE_MS); 
 
 	return IPS_OK;
 }

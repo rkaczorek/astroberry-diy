@@ -22,6 +22,7 @@ include_directories(${INDI_INCLUDE_DIR})
 include(CMakeCommon)
 
 set(GPIO_LIBRARIES "libgpiod.so")
+set(PTHREAD_LIBRARIES "libpthread.so")
 
 ################ Astroberry System ################
 set(indi_astroberry_system_SRCS
@@ -47,7 +48,7 @@ IF (UNITY_BUILD)
 ENDIF ()
 
 add_executable(indi_astroberry_focuser ${indi_astroberry_focuser_SRCS})
-target_link_libraries(indi_astroberry_focuser ${INDI_DRIVER_LIBRARIES} ${GPIO_LIBRARIES})
+target_link_libraries(indi_astroberry_focuser ${INDI_DRIVER_LIBRARIES} ${GPIO_LIBRARIES} ${PTHREAD_LIBRARIES})
 install(TARGETS indi_astroberry_focuser RUNTIME DESTINATION bin )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_astroberry_focuser.xml DESTINATION ${INDI_DATA_DIR})
 

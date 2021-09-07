@@ -19,6 +19,7 @@
 #ifndef FOCUSRPI_H
 #define FOCUSRPI_H
 
+#include <atomic>
 #include <indifocuser.h>
 
 class AstroberryFocuser : public INDI::Focuser
@@ -79,6 +80,16 @@ private:
 	INumberVectorProperty TemperatureCoefNP;
 	ISwitch TemperatureCompensateS[2];
 	ISwitchVectorProperty TemperatureCompensateSP;
+
+	//interruptible motion thread-related fields and methods
+	std::atomic<bool> focuserMoving;
+	std::atomic<bool> focuserCompleted;
+	std::atomic<int> threadFocuserAbs;
+	int threadTicksToMove;
+	int threadStepDelay;
+	bool threadReverse;
+	int threadBacklash;
+	void movingThreadCode();
 
 	struct gpiod_chip *chip;
 	struct gpiod_line *gpio_dir;
