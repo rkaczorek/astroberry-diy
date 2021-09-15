@@ -82,8 +82,7 @@ private:
 	ISwitchVectorProperty TemperatureCompensateSP;
 
 	//interruptible motion thread-related fields and methods
-	std::atomic<bool> focuserMoving;
-	std::atomic<bool> focuserCompleted;
+	std::atomic<int> focuserStatus;
 	std::atomic<int> threadFocuserAbs;
 	int threadTicksToMove;
 	int threadStepDelay;

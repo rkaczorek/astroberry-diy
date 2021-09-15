@@ -49,6 +49,12 @@ std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 #define TEMPERATURE_UPDATE_TIMEOUT (60 * 1000) // 60 sec
 #define STEPPER_STANDBY_TIMEOUT (60 * 1000) // 60 sec
 #define TEMPERATURE_COMPENSATION_TIMEOUT (60 * 1000) // 60 sec
+
+#define FOCUSER_STATE_IDLE          0
+#define FOCUSER_STATE_ABORTED       1
+#define FOCUSER_STATE_ABORT         2
+#define FOCUSER_STATE_MOVING        3
+
 #define MOVING_THREAD_UPDATE_MS		500 //0,5 sec
 
 void ISPoll(void *p);
@@ -191,12 +197,20 @@ bool AstroberryFocuser::Connect()
 
 bool AstroberryFocuser::Disconnect()
 {
-	if (focuserMoving.load()) { //focuser still moving.
-		focuserMoving.store(false); //ask bg thread to terminate
-		//wait for focuser completed to become true	
-		while(!focuserCompleted.load()) {}
-		//now we can proceed
+    // Stop timers
+	RemoveTimer(1); //ID 1 is just a placeholder
+	IERmTimer(stepperStandbyID);
+	IERmTimer(updateTemperatureID);
+	IERmTimer(temperatureCompensationID);
+    
+    if (focuserStatus.load() > FOCUSER_STATE_ABORTED) //ABORTing or MOVING
+    { 
+		focuserStatus.store(FOCUSER_STATE_ABORT); //ask bg thread to abort
+		while(focuserStatus.load() > FOCUSER_STATE_ABORTED) { /* wait for bg thread to finish */ }
+        TimerHit(); //make sure to do final housekeeping
 	}
+
+	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
 	
 	// Close device
 	gpiod_chip_close(chip);
@@ -208,11 +222,6 @@ bool AstroberryFocuser::Disconnect()
 	// Unlock BCM Pins setting
 	BCMpinsNP.s=IPS_IDLE;
 	IDSetNumber(&BCMpinsNP, nullptr);
-
-	// Stop timers
-	IERmTimer(stepperStandbyID);
-	IERmTimer(updateTemperatureID);
-	IERmTimer(temperatureCompensationID);
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser disconnected successfully.");
 
@@ -801,48 +810,48 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 }
 
 void AstroberryFocuser::TimerHit()
-{
-	//only called regularly while focuser is moving, to update Props/Client
-	
-	//still moving, update current position	
-	if (focuserMoving.load()) { 
-		FocusAbsPosN [0].value = threadFocuserAbs.load();
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-		SetTimer(MOVING_THREAD_UPDATE_MS); //see you again soon
-	}
+{   //only called regularly while focuser is moving, to update Props/Client
+    
+    //update current focuser abs position
+	FocusAbsPosN [0].value = threadFocuserAbs.load();
+    IDSetNumber(&FocusAbsPosNP, nullptr);
 	
 	//focuser completed: do final props/client update and some housekeeping
-	if (focuserCompleted.load()) { 
-		FocusAbsPosNP.s=IPS_OK;
-		FocusAbsPosN[0].value = threadFocuserAbs.load();
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-
+	if (focuserStatus.load() < FOCUSER_STATE_ABORT) //IDLE or ABORTED
+    { 
 		//save position to file
 		savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
 
-		// update abspos value and status
+		// update abs pos value and status
 		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
 
-		FocusAbsPosNP.s = IPS_OK;
-		IDSetNumber(&FocusAbsPosNP, nullptr);
+		// register last temperature if it was a successful (not aborted) focusing
+        if (focuserStatus.load() == FOCUSER_STATE_IDLE)
+            lastTemperature = FocusTemperatureN[0].value; 
 
-		// reset last temperature
-		lastTemperature = FocusTemperatureN[0].value; // register last temperature
-
+        focuserStatus.store(FOCUSER_STATE_IDLE); //reset to idle state
+            
 		// set motor standby timer
 		IERmTimer(stepperStandbyID);
-		stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);		
-	}			
+		stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);
+
+        //green light for focuser absolute position
+        FocusAbsPosNP.s = IPS_OK;
+        IDSetNumber(&FocusAbsPosNP, nullptr);
+	} else 
+		SetTimer(MOVING_THREAD_UPDATE_MS); //still moving or aborting: see you soon for next update        
 }
 
 bool AstroberryFocuser::AbortFocuser()
-{
-	if (focuserMoving.load()) {
-		focuserMoving.store(false); //flag to not continue
-		DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
+{    
+    int m = FOCUSER_STATE_MOVING;
+    if (focuserStatus.compare_exchange_strong(m, FOCUSER_STATE_ABORT)) //flags ABORT if it was MOVING
+    {
+		DEBUG(INDI::Logger::DBG_SESSION, "Aborting focuser motion.");
 	} else {
 		DEBUG(INDI::Logger::DBG_SESSION, "Focuser wasn't moving!");	
 	}
+	
 	return true;
 }
 
@@ -883,7 +892,8 @@ void AstroberryFocuser::movingThreadCode()
 	threadTicksToMove = abs(threadTicksToMove);
 
 	// handle Reverse Motion
-	if (threadReverse) {
+	if (threadReverse) 
+    {
 		lastdir = (lastdir == 0) ? lastdir == 1 : lastdir == 0;
 		(gpiod_line_get_value(gpio_dir) == 0) ? gpiod_line_set_value(gpio_dir, 1) : gpiod_line_set_value(gpio_dir, 0);
 	}
@@ -909,7 +919,7 @@ void AstroberryFocuser::movingThreadCode()
 	}
 
 	DEBUGF(INDI::Logger::DBG_DEBUG, "Starting actual move: %u ticks to go", threadTicksToMove);
-	for ( int i = 0; (i < threadTicksToMove) && focuserMoving.load(); i++ )
+	for ( int i = 0; (i < threadTicksToMove) && (focuserStatus.load() == FOCUSER_STATE_MOVING); i++ )
 	{
 		// step on
 		gpiod_line_set_value(gpio_step, 1);
@@ -923,16 +933,19 @@ void AstroberryFocuser::movingThreadCode()
 		threadFocuserAbs.fetch_add(direction); //increment position keeper
 	}
 	
-	DEBUG(INDI::Logger::DBG_DEBUG, "Completed: flagging completion");
-	focuserMoving.store(false); //having reached target or not (if someone aborted), here we're not moving anymore...
-	focuserCompleted.store(true); //...and it's time to let others know we're done.
-	
+	DEBUG(INDI::Logger::DBG_DEBUG, "Motion completed");
+    
+    int e = FOCUSER_STATE_ABORT;
+    if (! focuserStatus.compare_exchange_strong(e, FOCUSER_STATE_ABORTED)) //set to ABORTED if it was ABORT, 
+        focuserStatus.store(FOCUSER_STATE_IDLE); //otherwise set to IDLE
+
 	DEBUG(INDI::Logger::DBG_DEBUG, "Moving thread exiting");
 }
 
 IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 {
-	if (focuserMoving.load()) {
+	if (focuserStatus.load() != FOCUSER_STATE_IDLE) 
+    {
 		DEBUG(INDI::Logger::DBG_SESSION, "Focuser is moving now, refused.");
 		return IPS_BUSY;
 	}
@@ -949,10 +962,17 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 		return IPS_OK;
 	}
 
+	//set focuser status to MOVING
+	focuserStatus.store(FOCUSER_STATE_MOVING);
+	
+    // abort any pending standby timer to avoid it fires while focuser is moving. 
+    IERmTimer(stepperStandbyID);
+
+    
 	// set focuser busy
 	FocusAbsPosNP.s = IPS_BUSY;
 	IDSetNumber(&FocusAbsPosNP, nullptr);
-
+    
 	// prepare data for thread to run
 	threadFocuserAbs.store(FocusAbsPosN[0].value);
 	threadStepDelay = FocusStepDelayN[0].value;
@@ -960,10 +980,6 @@ IPState AstroberryFocuser::MoveAbsFocuser(int targetTicks)
 	threadBacklash = FocusBacklashN[0].value;
 	threadReverse = (FocusReverseS[INDI_ENABLED].s == ISS_ON);
 	
-	//set flags
-	focuserCompleted.store(false);
-	focuserMoving.store(true);
-
 	//start bg thread
 	std::thread mt(&AstroberryFocuser::movingThreadCode, this);
 	mt.detach(); //let it go without us...
@@ -1280,7 +1296,7 @@ void AstroberryFocuser::temperatureCompensation()
 	if (!isConnected())
 		return;
 
-	if ( TemperatureCompensateS[0].s == ISS_ON && FocusTemperatureN[0].value != lastTemperature )
+	if ( (focuserStatus.load() == FOCUSER_STATE_IDLE) && (TemperatureCompensateS[0].s == ISS_ON) && (FocusTemperatureN[0].value != lastTemperature) )
 	{
 		float deltaTemperature = FocusTemperatureN[0].value - lastTemperature; // change of temperature from last focuser movement
 		float thermalExpansionRatio = TemperatureCoefN[0].value * ScopeParametersN[1].value / 1000; // termal expansion in micrometers per 1 celcius degree
@@ -1292,8 +1308,8 @@ void AstroberryFocuser::temperatureCompensation()
 		{
 			int thermalAdjustment = round((thermalExpansion / FocuserInfoN[0].value) / 2); // adjust focuser by half number of steps to keep it in the center of cfz
 			MoveAbsFocuser(FocusAbsPosN[0].value + thermalAdjustment); // adjust focuser position
-			lastTemperature = FocusTemperatureN[0].value; // register last temperature
-			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser adjusted by %d steps due to temperature change by %0.2f°C", thermalAdjustment, deltaTemperature);
+			//lastTemperature = FocusTemperatureN[0].value; // register last temperature: not needed here since lastTemperature is updated when focuser motion finishes
+			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser adjusting by %d steps due to temperature change by %0.2f°C", thermalAdjustment, deltaTemperature);
 		}
 	}
 
