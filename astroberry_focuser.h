@@ -41,8 +41,10 @@ protected:
 	virtual IPState MoveAbsFocuser(int ticks);
 	virtual IPState MoveRelFocuser(FocusDirection dir, int ticks);
 	virtual bool saveConfigItems(FILE *fp);
-	virtual bool ReverseFocuser(bool enabled);
-	virtual bool AbortFocuser();
+	virtual bool ReverseFocuser(bool enabled) override;
+	virtual bool SyncFocuser(uint32_t ticks) override;
+	virtual bool SetFocuserBacklash(int32_t steps) override;
+	virtual bool AbortFocuser() override;
 	virtual void TimerHit();
 private:
 	virtual bool Connect();
@@ -63,12 +65,8 @@ private:
 	INumberVectorProperty BCMpinsNP;
 	INumber FocusStepDelayN[1];
 	INumberVectorProperty FocusStepDelayNP;
-	INumber FocusBacklashN[1];
-	INumberVectorProperty FocusBacklashNP;
 	INumber FocuserTravelN[1];
 	INumberVectorProperty FocuserTravelNP;
-	ISwitch ResetAbsPosS[1];
-	ISwitchVectorProperty ResetAbsPosSP;
 	IText ActiveTelescopeT[1];
 	ITextVectorProperty ActiveTelescopeTP;
 	INumber ScopeParametersN[2];

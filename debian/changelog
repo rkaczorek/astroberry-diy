@@ -1,3 +1,11 @@
+indi-astroberry-diy (2.10) UNRELEASED; urgency=medium
+
+  * Native sync capability added (replacing custom reset)
+  * Native backlash capability added (replacing custom backlash)
+  * Min-max position handling improved
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Wed, 27 Oct 2021 01:44:28 +0200
+
 indi-astroberry-diy (2.9) buster; urgency=medium
 
   * Master switch removed from relays (security)
