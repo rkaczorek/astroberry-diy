@@ -59,10 +59,14 @@ private:
 	ISwitchVectorProperty MotorBoardSP;
 	ISwitch TemperatureCompensateS[2];
 	ISwitchVectorProperty TemperatureCompensateSP;
+	ISwitch StepperStandbyS[2];
+	ISwitchVectorProperty StepperStandbySP;
 	INumber FocuserInfoN[3];
 	INumberVectorProperty FocuserInfoNP;
 	INumber BCMpinsN[6];
 	INumberVectorProperty BCMpinsNP;
+	INumber StepperStandbyTimeN[1];
+	INumberVectorProperty StepperStandbyTimeNP;	
 	INumber FocusStepDelayN[1];
 	INumberVectorProperty FocusStepDelayNP;
 	INumber FocuserTravelN[1];

@@ -48,7 +48,6 @@ std::unique_ptr<AstroberryFocuser> astroberryFocuser(new AstroberryFocuser());
 #define MINMAX_MAX_POS 100000 // highest limit for focuser position
 #define MAX_RESOLUTION 32 // the highest resolution supported is 1/32 step
 #define TEMPERATURE_UPDATE_TIMEOUT (60 * 1000) // 60 sec
-#define STEPPER_STANDBY_TIMEOUT (60 * 1000) // 60 sec
 #define TEMPERATURE_COMPENSATION_TIMEOUT (60 * 1000) // 60 sec
 
 void ISPoll(void *p);
@@ -191,7 +190,13 @@ bool AstroberryFocuser::Connect()
 	getFocuserInfo();
 
 	// set motor standby timer
-	stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);
+	if ( StepperStandbyS[0].s == ISS_ON)
+	{
+		stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
+	} else {
+		stepperStandbyID = -1;
+	}
 
 	DEBUG(INDI::Logger::DBG_SESSION, "Astroberry Focuser connected successfully.");
 
@@ -260,6 +265,15 @@ bool AstroberryFocuser::initProperties()
 	IUFillNumber(&BCMpinsN[4], "BCMPIN_M2", "M2", "%0.0f", 1, 27, 0, 18); // BCM18 = PIN12
 	IUFillNumber(&BCMpinsN[5], "BCMPIN_M3", "M3", "%0.0f", 1, 27, 0, 27); // BCM27 = PIN13
 	IUFillNumberVector(&BCMpinsNP, BCMpinsN, 6, getDeviceName(), "BCMPINS", "BCM Pins", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+	// Stepper standby setting
+	IUFillSwitch(&StepperStandbyS[0],"STEPPER_STANDBY_ON","Enable",ISS_ON);
+	IUFillSwitch(&StepperStandbyS[1],"STEPPER_STANDBY_OFF","Disable",ISS_OFF);
+	IUFillSwitchVector(&StepperStandbySP,StepperStandbyS,2,getDeviceName(),"STEPPER_STANDBY","Standby",OPTIONS_TAB,IP_RW,ISR_1OFMANY,0,IPS_IDLE);
+
+	// Stepper standby time setting
+	IUFillNumber(&StepperStandbyTimeN[0], "STEPPER_STANDBY_DELAY_VALUE", "seconds", "%0.0f", 0, 600, 10, 60);
+	IUFillNumberVector(&StepperStandbyTimeNP, StepperStandbyTimeN, 1, getDeviceName(), "STEPPER_STANDBY_DELAY", "Standby Delay", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);	
 
 	// Step delay setting
 	IUFillNumber(&FocusStepDelayN[0], "FOCUS_STEPDELAY_VALUE", "milliseconds", "%0.0f", 1, 10, 1, 1);
@@ -342,6 +356,8 @@ bool AstroberryFocuser::updateProperties()
 
 	if (isConnected())
 	{
+		defineSwitch(&StepperStandbySP);
+		defineNumber(&StepperStandbyTimeNP);
 		defineText(&ActiveTelescopeTP);
 		defineSwitch(&FocusResolutionSP);
 		defineNumber(&FocuserTravelNP);
@@ -364,6 +380,8 @@ bool AstroberryFocuser::updateProperties()
 		}
 
 	} else {
+		deleteProperty(StepperStandbySP.name);
+		deleteProperty(StepperStandbyTimeNP.name);
 		deleteProperty(ActiveTelescopeTP.name);
 		deleteProperty(FocusResolutionSP.name);
 		deleteProperty(FocuserTravelNP.name);
@@ -445,6 +463,16 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 			}
 		}
 
+		// handle stepper standby delay
+		if (!strcmp(name, StepperStandbyTimeNP.name))
+		{
+			IUUpdateNumber(&StepperStandbyTimeNP,values,names,n);
+			StepperStandbyTimeNP.s=IPS_OK;
+			IDSetNumber(&StepperStandbyTimeNP, nullptr);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser standby set to %0.0f  seconds", StepperStandbyTimeN[0].value);
+			return true;
+		}		
+
 		// handle focus maximum position
 		if (!strcmp(name, FocusMaxPosNP.name))
 		{
@@ -523,6 +551,27 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 				IDSetSwitch(&MotorBoardSP, nullptr);
 				return true;
 			}
+		}
+
+		// handle stepper standby
+		if(!strcmp(name, StepperStandbySP.name))
+		{
+			IUUpdateSwitch(&StepperStandbySP, states, names, n);
+
+			if ( StepperStandbyS[0].s == ISS_ON)
+			{
+				StepperStandbySP.s = IPS_OK;
+				DEBUG(INDI::Logger::DBG_SESSION, "Stepper standby enabled.");
+			}
+
+			if ( StepperStandbyS[1].s == ISS_ON)
+			{
+				StepperStandbySP.s = IPS_OK;
+				DEBUG(INDI::Logger::DBG_SESSION, "Stepper standby disabled.");
+			}
+
+			IDSetSwitch(&StepperStandbySP, nullptr);
+			return true;
 		}
 
 		// handle focus resolution
@@ -638,14 +687,14 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 				if (!temperatureCompensationID)
 					temperatureCompensationID = IEAddTimer(TEMPERATURE_COMPENSATION_TIMEOUT, temperatureCompensationHelper, this);
 				TemperatureCompensateSP.s = IPS_OK;
-				DEBUG(INDI::Logger::DBG_SESSION, "Temperature compensation ENABLED.");
+				DEBUG(INDI::Logger::DBG_SESSION, "Temperature compensation enabled.");
 			}
 
 			if ( TemperatureCompensateS[1].s == ISS_ON)
 			{
 				IERmTimer(temperatureCompensationID);
 				TemperatureCompensateSP.s = IPS_IDLE;
-				DEBUG(INDI::Logger::DBG_SESSION, "Temperature compensation DISABLED.");
+				DEBUG(INDI::Logger::DBG_SESSION, "Temperature compensation disabled.");
 			}
 
 			IDSetSwitch(&TemperatureCompensateSP, nullptr);
@@ -695,6 +744,8 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 {
 	IUSaveConfigSwitch(fp, &MotorBoardSP);
 	IUSaveConfigNumber(fp, &BCMpinsNP);
+	IUSaveConfigSwitch(fp, &StepperStandbySP);
+	IUSaveConfigNumber(fp, &StepperStandbyTimeNP);
 	IUSaveConfigSwitch(fp, &FocusResolutionSP);
 	IUSaveConfigSwitch(fp, &FocusReverseSP);
 	IUSaveConfigNumber(fp, &FocusMaxPosNP);
@@ -878,8 +929,12 @@ bool AstroberryFocuser::stepperGoto(int pos)
 	lastTemperature = FocusTemperatureN[0].value; // register last temperature
 
 	// set motor standby timer
-	IERmTimer(stepperStandbyID);
-	stepperStandbyID = IEAddTimer(STEPPER_STANDBY_TIMEOUT, stepperStandbyHelper, this);
+	if ( StepperStandbyS[0].s == ISS_ON)
+	{
+		IERmTimer(stepperStandbyID);
+		stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
+		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
+	}
 	
 	return true;
 }
@@ -1162,7 +1217,7 @@ void AstroberryFocuser::stepperStandby()
 		return;
 
 	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
-	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby.");
+	DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor going standby.");
 }
 
 void AstroberryFocuser::updateTemperature()
