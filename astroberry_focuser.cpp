@@ -19,7 +19,7 @@
 /*
  * TO DO:
  * - Save position in xml instead flat file
- * - Handle AbortFocuser()
+ * - Add Thermal expansion ratio selection for various materials
  * - Add temperature compensation auto learning and save temperature compensation curve to xml
  * - Add simulation mode
  */
@@ -169,14 +169,16 @@ bool AstroberryFocuser::Connect()
 	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 1); // start stepper in wake up state
 	gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
 	gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
+	
+	// If A4988 controller, use additional GPIO
 	if ( MotorBoardS[1].s == ISS_ON )
-		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);	
+		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
 	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) * resolution / MAX_RESOLUTION : 0;
 
 	// preset resolution
-	SetResolution(resolution);
+	setResolution(resolution);
 
 	// Lock Motor Board setting
 	MotorBoardSP.s=IPS_BUSY;
@@ -193,7 +195,7 @@ bool AstroberryFocuser::Connect()
 	if ( StepperStandbyS[0].s == ISS_ON)
 	{
 		stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
+		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
 	} else {
 		stepperStandbyID = -1;
 	}
@@ -631,7 +633,7 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 				MoveAbsFocuser(FocusAbsPosN[0].value + position_adjustment);
 			}
 
-			SetResolution(resolution);
+			setResolution(resolution);
 
 			// update values based on resolution
 			FocusMaxPosN[0].max = (int) FocusMaxPosN[0].max * resolution / last_resolution;
@@ -762,6 +764,68 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 
 void AstroberryFocuser::TimerHit()
 {
+	if (backlashTicksRemaining == 0 && focuserTicksRemaining == 0)
+	{
+		//save position to file
+		savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
+
+		// update abspos value and status
+		FocusAbsPosNP.s = IPS_OK;
+		IDSetNumber(&FocusAbsPosNP, nullptr);
+		FocusRelPosNP.s = IPS_OK;
+		IDSetNumber(&FocusRelPosNP, nullptr);
+		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
+
+		// reset last temperature
+		lastTemperature = FocusTemperatureN[0].value; // register last temperature
+
+		// set motor standby timer
+		if ( StepperStandbyS[0].s == ISS_ON)
+		{
+			stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
+			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
+		}
+		return;
+	}
+
+	// handle reverse motion
+	if (stepperDirection == 1)
+	{
+		// outward
+		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
+			gpiod_line_set_value(gpio_dir, 0); // Reverse Motion
+		} else {
+			gpiod_line_set_value(gpio_dir, 1); // Normal Motion
+		}
+	} else {
+		// inward
+		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
+			gpiod_line_set_value(gpio_dir, 1); // Reverse Motion
+		} else {
+			gpiod_line_set_value(gpio_dir, 0); // Normal Motion
+		}
+	}
+
+	bool isBacklash = false;
+	if (backlashTicksRemaining > 0)
+	{
+		isBacklash = true;
+	}
+
+	// make a single step
+	stepMotor();
+
+	// update absolute position only if processing real steps not backlash
+	if (isBacklash)
+	{
+		backlashTicksRemaining -= 1;
+	}  else {
+		focuserTicksRemaining -= 1;
+		FocusAbsPosN[0].value += 1 * stepperDirection;
+		IDSetNumber(&FocusAbsPosNP, nullptr);
+	}
+
+	SetTimer(FocusStepDelayN[0].value);
 }
 
 bool AstroberryFocuser::ReverseFocuser(bool enabled)
@@ -790,12 +854,20 @@ bool AstroberryFocuser::SetFocuserBacklash(int32_t steps)
 
 bool AstroberryFocuser::AbortFocuser()
 {
+	backlashTicksRemaining = 0;
+	focuserTicksRemaining = 0;
 	DEBUG(INDI::Logger::DBG_SESSION, "Focuser motion aborted.");
 	return true;
 }
 
 IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 {
+	if (backlashTicksRemaining > 0 || focuserTicksRemaining > 0)
+	{
+		DEBUG(INDI::Logger::DBG_WARNING, "Focuser movement still in progress.");
+		return IPS_BUSY;
+	}
+
 	if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
 	{
 		DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
@@ -814,22 +886,44 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	FocusRelPosNP.s = IPS_BUSY;
 	IDSetNumber(&FocusRelPosNP, nullptr);
 
-	if(stepperGoto(targetTicks))
+	// motor wake up
+	if ( gpiod_line_get_value(gpio_sleep) == 0 )
 	{
-		FocusAbsPosNP.s = IPS_OK;
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-		FocusRelPosNP.s = IPS_OK;
-		IDSetNumber(&FocusRelPosNP, nullptr);
-		return IPS_OK;
-
-	} else {
-		FocusAbsPosNP.s = IPS_ALERT;
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-		FocusRelPosNP.s = IPS_ALERT;
-		IDSetNumber(&FocusRelPosNP, nullptr);
-		return IPS_ALERT;
+		IERmTimer(stepperStandbyID);
+		gpiod_line_set_value(gpio_sleep, 1);
+		DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor waking up.");
 	}
-	
+
+	// set direction
+	const char* directionName;
+	int newDirection;
+	if (targetTicks > FocusAbsPosN[0].value)
+	{
+		newDirection = 1;
+		directionName = "outward";
+	} else {
+		newDirection = -1;
+		directionName = "inward";
+	}
+
+	// if direction changed do backlash adjustment
+	if (newDirection != stepperDirection && FocusBacklashN[0].value != 0  && FocusBacklashS[INDI_ENABLED].s == ISS_ON)
+	{
+		DEBUGF(INDI::Logger::DBG_SESSION, "Compensating backlash by %0.0f steps.", FocusBacklashN[0].value);
+		backlashTicksRemaining = FocusBacklashN[0].value;
+	} else {
+		backlashTicksRemaining = 0;
+	}
+
+	// update last stepper direction
+	stepperDirection = newDirection;
+
+	// process targetTicks
+	focuserTicksRemaining = abs(targetTicks - FocusAbsPosN[0].value);
+	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", directionName, targetTicks);
+
+	SetTimer(FocusStepDelayN[0].value);
+
 	return IPS_BUSY;
 }
 
@@ -839,107 +933,17 @@ IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 	return MoveAbsFocuser(targetTicks);
 }
 
-bool AstroberryFocuser::stepperGoto(int pos)
+void AstroberryFocuser::stepMotor()
 {
-	// motor wake up
-	if ( gpiod_line_get_value(gpio_sleep) == 0 )
-	{
-		gpiod_line_set_value(gpio_sleep, 1);
-		DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor waking up.");
-	}
-
-	// check last motion direction for backlash triggering
-	int lastdir = gpiod_line_get_value(gpio_dir);
-
-	// set direction
-	const char* direction;
-	if (pos > FocusAbsPosN[0].value)
-	{
-		// OUTWARD
-		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
-			gpiod_line_set_value(gpio_dir, 0); // Reverse Motion
-		} else {
-			gpiod_line_set_value(gpio_dir, 1); // Normal Motion
-		}
-		direction = "outward";
-	} else {
-		// INWARD
-		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
-			gpiod_line_set_value(gpio_dir, 1); // Reverse Motion
-		} else {
-			gpiod_line_set_value(gpio_dir, 0); // Normal Motion
-		}
-		direction = "inward";
-	}
-
-	// if direction changed do backlash adjustment
-	if ( FocusBacklashN[0].value != 0 && gpiod_line_get_value(gpio_dir) != lastdir && FocusBacklashS[INDI_ENABLED].s == ISS_ON)
-	{
-		DEBUGF(INDI::Logger::DBG_SESSION, "Compensating backlash by %0.0f steps.", FocusBacklashN[0].value);
-		for ( int i = 0; i < FocusBacklashN[0].value; i++ )
-		{
-			// step on
-			gpiod_line_set_value(gpio_step, 1);
-			// wait
-			msleep(FocusStepDelayN[0].value);
-			// step off
-			gpiod_line_set_value(gpio_step, 0);
-			// wait
-			msleep(FocusStepDelayN[0].value);
-		}
-	}
-
-	// process pos
-	int ticks = abs(pos - FocusAbsPosN[0].value);
-	
-	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", direction, pos);
-
-	for ( int i = 0; i < ticks; i++ )
-	{
-		// step on
-		gpiod_line_set_value(gpio_step, 1);
-		// wait
-		msleep(FocusStepDelayN[0].value);
-		// step off
-		gpiod_line_set_value(gpio_step, 0);
-		// wait
-		msleep(FocusStepDelayN[0].value);
-
-		// INWARD - count down
-		if ( direction == "inward" )
-			FocusAbsPosN[0].value -= 1;
-
-		// OUTWARD - count up
-		if ( direction == "outward" )
-			FocusAbsPosN[0].value += 1;
-
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-	}
-
-	//save position to file
-	savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
-
-	// update abspos value and status
-	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
-
-	FocusAbsPosNP.s = IPS_OK;
-	IDSetNumber(&FocusAbsPosNP, nullptr);
-
-	// reset last temperature
-	lastTemperature = FocusTemperatureN[0].value; // register last temperature
-
-	// set motor standby timer
-	if ( StepperStandbyS[0].s == ISS_ON)
-	{
-		IERmTimer(stepperStandbyID);
-		stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
-		DEBUGF(INDI::Logger::DBG_DEBUG, "Astroberry Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
-	}
-	
-	return true;
+	// step on
+	gpiod_line_set_value(gpio_step, 1);
+	// wait
+	msleep(FocusStepDelayN[0].value);
+	// step off
+	gpiod_line_set_value(gpio_step, 0);
 }
 
-void AstroberryFocuser::SetResolution(int res)
+void AstroberryFocuser::setResolution(int res)
 {
 	// Release lines
 	gpiod_line_release(gpio_m1);
@@ -1170,21 +1174,24 @@ void AstroberryFocuser::getFocuserInfo()
 		f_ratio = focal / aperture;
 	} else {
 		f_ratio =  0;
-		DEBUG(INDI::Logger::DBG_DEBUG, "No telescope focal length and/or aperture info available.");
+		DEBUG(INDI::Logger::DBG_WARNING, "No telescope focal length and/or aperture info available.");
 	}
 
 	float cfz = 4.88 * 0.520 * pow(f_ratio, 2); // CFZ = 4.88 · λ · f^2
 	float step_size = 1000.0 * travel_mm / FocusMaxPosN[0].value;
 	float steps_per_cfz = (int) cfz / step_size;
 
+	// alert is number of steps per critical focus zone is too low
 	if ( steps_per_cfz >= 4  )
 	{
 		FocuserInfoNP.s = IPS_OK;
 	}
 	else if ( steps_per_cfz > 2 && steps_per_cfz < 4 )
 	{
+		DEBUG(INDI::Logger::DBG_WARNING, "Resolution set too low for critical focus zone.");
 		FocuserInfoNP.s = IPS_BUSY;
 	} else {
+		DEBUG(INDI::Logger::DBG_WARNING, "Resolution set too low for critical focus zone.");
 		FocuserInfoNP.s = IPS_ALERT;
 	}
 
@@ -1217,7 +1224,7 @@ void AstroberryFocuser::stepperStandby()
 		return;
 
 	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
-	DEBUG(INDI::Logger::DBG_DEBUG, "Stepper motor going standby.");
+	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby.");
 }
 
 void AstroberryFocuser::updateTemperature()

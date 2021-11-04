@@ -4,6 +4,7 @@ indi-astroberry-diy (2.10) UNRELEASED; urgency=medium
   * Native backlash capability added (replacing custom backlash)
   * Min-max position handling improved
   * Stepper standby controls added
+  * Abort focuser motion added
 
  -- Radek Kaczorek <rkaczorek@gmail.com>  Wed, 27 Oct 2021 01:44:28 +0200
 

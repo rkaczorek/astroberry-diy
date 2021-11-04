@@ -49,9 +49,18 @@ protected:
 private:
 	virtual bool Connect();
 	virtual bool Disconnect();
-	virtual void SetResolution(int res);
+
+	virtual void stepMotor();
+	virtual void setResolution(int res);
 	virtual int savePosition(int pos);
 	virtual bool readDS18B20();
+	void getFocuserInfo();
+	int stepperStandbyID { -1 };
+	void stepperStandby();
+	int updateTemperatureID { -1 };
+	void updateTemperature();
+	int temperatureCompensationID { -1 };
+	void temperatureCompensation();
 
 	ISwitch FocusResolutionS[6];
 	ISwitchVectorProperty FocusResolutionSP;
@@ -88,17 +97,12 @@ private:
 	struct gpiod_line *gpio_m2;
 	struct gpiod_line *gpio_m3;
 
+	int backlashTicksRemaining;
+	int focuserTicksRemaining;
+	int stepperDirection = 1;
+	
 	int resolution = 1;
 	float lastTemperature;
-
-	bool stepperGoto(int pos);
-	void getFocuserInfo();
-	int stepperStandbyID { -1 };
-	void stepperStandby();
-	int updateTemperatureID { -1 };
-	void updateTemperature();
-	int temperatureCompensationID { -1 };
-	void temperatureCompensation();
 };
 
 #endif

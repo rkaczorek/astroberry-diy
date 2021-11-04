@@ -1,3 +1,10 @@
+v2.10
+  * Native sync capability added (replacing custom reset)
+  * Native backlash capability added (replacing custom backlash)
+  * Min-max position handling improved
+  * Stepper standby controls added
+  * Abort focuser motion added
+
 v2.9
 * Master switch removed for security reasons
 * System info update routine improved
