@@ -1,4 +1,4 @@
-indi-astroberry-diy (2.10) UNRELEASED; urgency=medium
+indi-astroberry-diy (2.10) buster; urgency=medium
 
   * Native sync capability added (replacing custom reset)
   * Native backlash capability added (replacing custom backlash)
@@ -6,7 +6,7 @@ indi-astroberry-diy (2.10) UNRELEASED; urgency=medium
   * Stepper standby controls added
   * Abort focuser motion added
 
- -- Radek Kaczorek <rkaczorek@gmail.com>  Wed, 27 Oct 2021 01:44:28 +0200
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Thu, 11 Nov 2021 06:30:28 +0100
 
 indi-astroberry-diy (2.9) buster; urgency=medium
 
