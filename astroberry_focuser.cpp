@@ -1,5 +1,5 @@
 /*******************************************************************************
-  Copyright(c) 2014-2020 Radek Kaczorek  <rkaczorek AT gmail DOT com>
+  Copyright(c) 2014-2022 Radek Kaczorek  <rkaczorek AT gmail DOT com>
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -782,6 +782,8 @@ void AstroberryFocuser::TimerHit()
 		// set motor standby timer
 		if ( StepperStandbyS[0].s == ISS_ON)
 		{
+			if (stepperStandbyID)
+				IERmTimer(stepperStandbyID);
 			stepperStandbyID = IEAddTimer(StepperStandbyTimeN[0].value * 1000, stepperStandbyHelper, this);
 			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser going standby in %d seconds", (int) IERemainingTimer(stepperStandbyID) /  1000);
 		}
