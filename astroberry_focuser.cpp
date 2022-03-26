@@ -112,15 +112,15 @@ AstroberryFocuser::AstroberryFocuser()
 	setVersion(VERSION_MAJOR,VERSION_MINOR);
 
 	FI::SetCapability(
-		FOCUSER_CAN_ABS_MOVE	| 
-		FOCUSER_CAN_REL_MOVE | 
-		FOCUSER_CAN_REVERSE 	| 
-		FOCUSER_HAS_BACKLASH	| 
-		FOCUSER_CAN_SYNC 			| 
+		FOCUSER_CAN_ABS_MOVE	|
+		FOCUSER_CAN_REL_MOVE	|
+		FOCUSER_CAN_REVERSE 	|
+		FOCUSER_HAS_BACKLASH	|
+		FOCUSER_CAN_SYNC 	|
 		FOCUSER_CAN_ABORT
 		// FOCUSER_HAS_VARIABLE_SPEED
-		); 
-	
+		);
+
 	Focuser::setSupportedConnections(CONNECTION_NONE);
 }
 
@@ -169,7 +169,7 @@ bool AstroberryFocuser::Connect()
 	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 1); // start stepper in wake up state
 	gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
 	gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-	
+
 	// If A4988 controller, use additional GPIO
 	if ( MotorBoardS[1].s == ISS_ON )
 		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
@@ -214,7 +214,7 @@ bool AstroberryFocuser::Disconnect()
 
 	// Set stepper motor asleep
 	gpiod_line_set_value(gpio_sleep, 0);
-	
+
 	// Close device
 	gpiod_chip_close(chip);
 
@@ -237,11 +237,11 @@ bool AstroberryFocuser::initProperties()
 
 	// Focuser Resolution
 	IUFillSwitch(&FocusResolutionS[0],"FOCUS_RESOLUTION_1","Full Step",ISS_ON);
-	IUFillSwitch(&FocusResolutionS[1],"FOCUS_RESOLUTION_2","Half Step",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[2],"FOCUS_RESOLUTION_4","1/4 STEP",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[3],"FOCUS_RESOLUTION_8","1/8 STEP",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[4],"FOCUS_RESOLUTION_16","1/16 STEP",ISS_OFF);
-	IUFillSwitch(&FocusResolutionS[5],"FOCUS_RESOLUTION_32","1/32 STEP",ISS_OFF);
+	IUFillSwitch(&FocusResolutionS[1],"FOCUS_RESOLUTION_2","1/2 Step",ISS_OFF);
+	IUFillSwitch(&FocusResolutionS[2],"FOCUS_RESOLUTION_4","1/4 Step",ISS_OFF);
+	IUFillSwitch(&FocusResolutionS[3],"FOCUS_RESOLUTION_8","1/8 Step",ISS_OFF);
+	IUFillSwitch(&FocusResolutionS[4],"FOCUS_RESOLUTION_16","1/16 Step",ISS_OFF);
+	IUFillSwitch(&FocusResolutionS[5],"FOCUS_RESOLUTION_32","1/32 Step",ISS_OFF);
 	IUFillSwitchVector(&FocusResolutionSP,FocusResolutionS,6,getDeviceName(),"FOCUS_RESOLUTION","Resolution",MAIN_CONTROL_TAB,IP_RW,ISR_1OFMANY,0,IPS_IDLE);
 
 	// Maximum focuser travel
@@ -321,7 +321,7 @@ bool AstroberryFocuser::initProperties()
 	FocusSyncN[0].min = 0;
 	FocusSyncN[0].max = FocusAbsPosN[0].max; // 10000
 	FocusSyncN[0].step = (int) FocusAbsPosN[0].max / 100; // 100
-	
+
 	FocusBacklashN[0].min = 0;
 	FocusBacklashN[0].max = (int) FocusAbsPosN[0].max / 100; // 100
 	FocusBacklashN[0].step = (int) FocusBacklashN[0].max / 100; // 1
@@ -473,7 +473,7 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 			IDSetNumber(&StepperStandbyTimeNP, nullptr);
 			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser standby set to %0.0f  seconds", StepperStandbyTimeN[0].value);
 			return true;
-		}		
+		}
 
 		// handle focus maximum position
 		if (!strcmp(name, FocusMaxPosNP.name))
@@ -654,11 +654,11 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			IDSetNumber(&FocusRelPosNP, nullptr);
 			IUUpdateMinMax(&FocusRelPosNP); // This call is not INDI protocol compliant
 
-            FocusSyncN[0].max = FocusSyncN[0].max * resolution / last_resolution;
-            FocusSyncN[0].step = FocusSyncN[0].step * resolution / last_resolution;
-            FocusSyncN[0].value = FocusSyncN[0].value * resolution / last_resolution;
-            IDSetNumber(&FocusSyncNP, nullptr);
-            IUUpdateMinMax(&FocusSyncNP); // This call is not INDI protocol compliant
+			FocusSyncN[0].max = FocusSyncN[0].max * resolution / last_resolution;
+			FocusSyncN[0].step = FocusSyncN[0].step * resolution / last_resolution;
+			FocusSyncN[0].value = FocusSyncN[0].value * resolution / last_resolution;
+			IDSetNumber(&FocusSyncNP, nullptr);
+			IUUpdateMinMax(&FocusSyncNP); // This call is not INDI protocol compliant
 
 			FocusBacklashN[0].max = (int) FocusBacklashN[0].max * resolution / last_resolution;
 			FocusBacklashN[0].step = (int) FocusBacklashN[0].step * resolution / last_resolution;
