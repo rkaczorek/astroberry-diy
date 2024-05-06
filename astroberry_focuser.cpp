@@ -137,7 +137,25 @@ const char * AstroberryFocuser::getDefaultName()
 
 bool AstroberryFocuser::Connect()
 {
-	chip = gpiod_chip_open("/dev/gpiochip0");
+	// Check Model number of Raspberry PI and define gpiochip number
+	FILE* pipe;
+	char buffer[128];
+
+	buffer[0] = '\0';
+	pipe = popen("cat /sys/firmware/devicetree/base/model", "r");
+	fgets(buffer, 128, pipe);
+	pclose(pipe);
+
+	const char* devicename;
+	if (strstr(buffer, "Raspberry Pi 5") != NULL) {
+		devicename = "/dev/gpiochip4";
+	}
+	else {
+		devicename = "/dev/gpiochip0";
+	}
+    LOGF_INFO("model:%s, device:%s", buffer, devicename);
+
+	chip = gpiod_chip_open(devicename);
 	if (!chip)
 	{
 		DEBUG(INDI::Logger::DBG_ERROR, "Problem initiating Astroberry Focuser.");
