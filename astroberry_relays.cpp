@@ -204,9 +204,9 @@ bool IndiAstroberryRelays::initProperties()
 
 	// Load options before connecting
 	// load config before defining switches
-	defineNumber(&BCMpinsNP);
-	defineSwitch(&ActiveStateSP);
-	defineText(&RelayLabelsTP);
+	defineProperty(&BCMpinsNP);
+	defineProperty(&ActiveStateSP);
+	defineProperty(&RelayLabelsTP);
 	loadConfig();
 
 	IUFillSwitch(&Switch1S[0], "SW1ON", "ON", ISS_OFF);
@@ -273,14 +273,14 @@ bool IndiAstroberryRelays::updateProperties()
 	if (isConnected())
 	{
 		// We're connected
-		defineSwitch(&Switch1SP);
-		defineSwitch(&Switch2SP);
-		defineSwitch(&Switch3SP);
-		defineSwitch(&Switch4SP);
-		defineSwitch(&Switch5SP);
-		defineSwitch(&Switch6SP);
-		defineSwitch(&Switch7SP);
-		defineSwitch(&Switch8SP);
+		defineProperty(&Switch1SP);
+		defineProperty(&Switch2SP);
+		defineProperty(&Switch3SP);
+		defineProperty(&Switch4SP);
+		defineProperty(&Switch5SP);
+		defineProperty(&Switch6SP);
+		defineProperty(&Switch7SP);
+		defineProperty(&Switch8SP);
 		//defineSwitch(&MasterSwitchSP);
 		//defineLight(&SwitchStatusLP);
 	}
