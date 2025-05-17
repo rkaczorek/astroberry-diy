@@ -193,7 +193,7 @@ bool AstroberryFocuser::Connect()
 		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
-	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) * resolution / MAX_RESOLUTION : 0;
+	FocusAbsPosNP[0].setValue(savePosition(-1) != -1 ? (int) savePosition(-1) * resolution / MAX_RESOLUTION : 0);
 
 	// preset resolution
 	setResolution(resolution);
@@ -322,30 +322,30 @@ bool AstroberryFocuser::initProperties()
 	IUFillNumberVector(&ScopeParametersNP, ScopeParametersN, 2, ActiveTelescopeT[0].text, "TELESCOPE_INFO", "Scope Properties", OPTIONS_TAB, IP_RW, 60, IPS_OK);
 
 	// initial values at resolution 1/1
-	FocusMaxPosN[0].min = MINMAX_MIN_POS; // 0
-	FocusMaxPosN[0].max = MINMAX_MAX_POS; // 100000
-	FocusMaxPosN[0].step = (int) FocusMaxPosN[0].max / 100;
-	FocusMaxPosN[0].value = (int) FocusMaxPosN[0].max / 10;
+	FocusMaxPosNP[0].min = MINMAX_MIN_POS; // 0
+	FocusMaxPosNP[0].max = MINMAX_MAX_POS; // 100000
+	FocusMaxPosNP[0].step = (int) FocusMaxPosNP[0].max / 100;
+	FocusMaxPosNP[0].setValue((int) FocusMaxPosNP[0].max / 10);
 
-	FocusAbsPosN[0].min = 0;
-	FocusAbsPosN[0].max = FocusMaxPosN[0].value; // 10000
-	FocusAbsPosN[0].step = (int) FocusAbsPosN[0].max / 100; // 100
+	FocusAbsPosNP[0].min = 0;
+	FocusAbsPosNP[0].max = FocusMaxPosNP[0].value; // 10000
+	FocusAbsPosNP[0].step = (int) FocusAbsPosNP[0].max / 100; // 100
 
-	FocusRelPosN[0].min = 0;
-	FocusRelPosN[0].max = (int) FocusAbsPosN[0].max / 10; // 1000
-	FocusRelPosN[0].step = (int) FocusRelPosN[0].max / 10; // 100
-	FocusRelPosN[0].value = (int) FocusRelPosN[0].max / 10; // 100
+	FocusRelPosNP[0].min = 0;
+	FocusRelPosNP[0].max = (int) FocusAbsPosNP[0].max / 10; // 1000
+	FocusRelPosNP[0].step = (int) FocusRelPosNP[0].max / 10; // 100
+	FocusRelPosNP[0].setValue((int) FocusRelPosNP[0].max / 10); // 100
 
-	FocusSyncN[0].min = 0;
-	FocusSyncN[0].max = FocusAbsPosN[0].max; // 10000
-	FocusSyncN[0].step = (int) FocusAbsPosN[0].max / 100; // 100
+	FocusSyncNP[0].min = 0;
+	FocusSyncNP[0].max = FocusAbsPosNP[0].max; // 10000
+	FocusSyncNP[0].step = (int) FocusAbsPosNP[0].max / 100; // 100
 
-	FocusBacklashN[0].min = 0;
-	FocusBacklashN[0].max = (int) FocusAbsPosN[0].max / 100; // 100
-	FocusBacklashN[0].step = (int) FocusBacklashN[0].max / 100; // 1
+	FocusBacklashNP[0].min = 0;
+	FocusBacklashNP[0].max = (int) FocusAbsPosNP[0].max / 100; // 100
+	FocusBacklashNP[0].step = (int) FocusBacklashNP[0].max / 100; // 1
 
-	FocusMotionS[FOCUS_OUTWARD].s = ISS_ON;
-	FocusMotionS[FOCUS_INWARD].s = ISS_OFF;
+	FocusMotionSP[FOCUS_OUTWARD].s = ISS_ON;
+	FocusMotionSP[FOCUS_INWARD].s = ISS_OFF;
 
 	// Add default properties
 	// addAuxControls(); // enable simulation mode
@@ -494,9 +494,9 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 		}
 
 		// handle focus maximum position
-		if (!strcmp(name, FocusMaxPosNP.name))
+		if (!strcmp(name, FocusMaxPosNP.getName()))
 		{
-			IUUpdateNumber(&FocusMaxPosNP,values,names,n);
+			FocusMaxPosNP.update(values,names,n);
 			getFocuserInfo();
 		}
 
@@ -638,7 +638,7 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			}
 
 			// Adjust position to a step in lower resolution
-			int position_adjustment = last_resolution * (FocusAbsPosN[0].value / last_resolution - (int) FocusAbsPosN[0].value / last_resolution);
+			int position_adjustment = last_resolution * (FocusAbsPosNP[0].getValue() / last_resolution - (int) FocusAbsPosNP[0].getValue() / last_resolution);
 			if ( resolution < last_resolution && position_adjustment > 0 )
 			{
 				if ( (float) position_adjustment / last_resolution < 0.5)
@@ -648,46 +648,46 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 					position_adjustment = last_resolution - position_adjustment;
 				}
 				DEBUGF(INDI::Logger::DBG_SESSION, "Focuser position adjusted by %d steps at 1/%d resolution to sync with 1/%d resolution.", position_adjustment, last_resolution, resolution);
-				MoveAbsFocuser(FocusAbsPosN[0].value + position_adjustment);
+				MoveAbsFocuser(FocusAbsPosNP[0].getValue() + position_adjustment);
 			}
 
 			setResolution(resolution);
 
 			// update values based on resolution
-			FocusMaxPosN[0].max = (int) FocusMaxPosN[0].max * resolution / last_resolution;
-			FocusMaxPosN[0].step = (int) FocusMaxPosN[0].step * resolution / last_resolution;
-			FocusMaxPosN[0].value = (int) FocusMaxPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusMaxPosNP, nullptr);
-			IUUpdateMinMax(&FocusMaxPosNP); // This call is not INDI protocol compliant
+			FocusMaxPosNP[0].setMax((int) FocusMaxPosNP[0].max * resolution / last_resolution);
+			FocusMaxPosNP[0].setStep((int) FocusMaxPosNP[0].step * resolution / last_resolution);
+			FocusMaxPosNP[0].setValue((int) FocusMaxPosNP[0].getValue() * resolution / last_resolution);
+			FocusMaxPosNP.apply();
+			FocusMaxPosNP.updateMinMax(); // This call is not INDI protocol compliant
 
-			FocusAbsPosN[0].max = (int) FocusAbsPosN[0].max * resolution / last_resolution;
-			FocusAbsPosN[0].step = (int) FocusAbsPosN[0].step * resolution / last_resolution;
-			FocusAbsPosN[0].value = (int) FocusAbsPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusAbsPosNP, nullptr);
-			IUUpdateMinMax(&FocusAbsPosNP); // This call is not INDI protocol compliant
+			FocusAbsPosNP[0].setMax((int) FocusAbsPosNP[0].max * resolution / last_resolution);
+			FocusAbsPosNP[0].setStep((int) FocusAbsPosNP[0].step * resolution / last_resolution);
+			FocusAbsPosNP[0].setValue((int) FocusAbsPosNP[0].getValue() * resolution / last_resolution);
+			FocusAbsPosNP.apply();
+			FocusAbsPosNP.updateMinMax(); // This call is not INDI protocol compliant
 
-			FocusRelPosN[0].max = (int) FocusRelPosN[0].max * resolution / last_resolution;
-			FocusRelPosN[0].step = (int) FocusRelPosN[0].step * resolution / last_resolution;
-			FocusRelPosN[0].value = (int) FocusRelPosN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusRelPosNP, nullptr);
-			IUUpdateMinMax(&FocusRelPosNP); // This call is not INDI protocol compliant
+			FocusRelPosNP[0].max = (int) FocusRelPosNP[0].max * resolution / last_resolution;
+			FocusRelPosNP[0].step = (int) FocusRelPosNP[0].step * resolution / last_resolution;
+			FocusRelPosNP[0].setValue((int) FocusRelPosNP[0].getValue() * resolution / last_resolution);
+			FocusRelPosNP.apply();
+			FocusRelPosNP.updateMinMax(); // This call is not INDI protocol compliant
 
-			FocusSyncN[0].max = FocusSyncN[0].max * resolution / last_resolution;
-			FocusSyncN[0].step = FocusSyncN[0].step * resolution / last_resolution;
-			FocusSyncN[0].value = FocusSyncN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusSyncNP, nullptr);
-			IUUpdateMinMax(&FocusSyncNP); // This call is not INDI protocol compliant
+			FocusSyncNP[0].max = FocusSyncNP[0].max * resolution / last_resolution;
+			FocusSyncNP[0].step = FocusSyncNP[0].step * resolution / last_resolution;
+			FocusSyncNP[0].setValue(FocusSyncNP[0].getValue() * resolution / last_resolution);
+			FocusSyncNP.apply();
+			FocusSyncNP.updateMinMax(); // This call is not INDI protocol compliant
 
-			FocusBacklashN[0].max = (int) FocusBacklashN[0].max * resolution / last_resolution;
-			FocusBacklashN[0].step = (int) FocusBacklashN[0].step * resolution / last_resolution;
-			FocusBacklashN[0].value = (int) FocusBacklashN[0].value * resolution / last_resolution;
-			IDSetNumber(&FocusBacklashNP, nullptr);
-			IUUpdateMinMax(&FocusBacklashNP); // This call is not INDI protocol compliant
+			FocusBacklashNP[0].max = (int) FocusBacklashNP[0].max * resolution / last_resolution;
+			FocusBacklashNP[0].step = (int) FocusBacklashNP[0].step * resolution / last_resolution;
+			FocusBacklashNP[0].setValue((int) FocusBacklashNP[0].getValue() * resolution / last_resolution);
+			FocusBacklashNP.apply();
+			FocusBacklashNP.updateMinMax(); // This call is not INDI protocol compliant
 
-			PresetN[0].value = (int) PresetN[0].value * resolution / last_resolution;
-			PresetN[1].value = (int) PresetN[1].value * resolution / last_resolution;
-			PresetN[2].value = (int) PresetN[2].value * resolution / last_resolution;
-			IDSetNumber(&PresetNP, nullptr);
+			PresetNP[0].setValue((int) PresetNP[0].getValue() * resolution / last_resolution);
+			PresetNP[1].setValue((int) PresetNP[1].getValue() * resolution / last_resolution);
+			PresetNP[2].setValue((int) PresetNP[2].getValue() * resolution / last_resolution);
+			PresetNP.apply();
 
 			getFocuserInfo();
 
@@ -767,16 +767,16 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 	IUSaveConfigSwitch(fp, &StepperStandbySP);
 	IUSaveConfigNumber(fp, &StepperStandbyTimeNP);
 	IUSaveConfigSwitch(fp, &FocusResolutionSP);
-	IUSaveConfigSwitch(fp, &FocusReverseSP);
-	IUSaveConfigNumber(fp, &FocusMaxPosNP);
-	IUSaveConfigSwitch(fp, &FocusBacklashSP);
-	IUSaveConfigNumber(fp, &FocusBacklashNP);
+	FocusReverseSP.save(fp);
+	FocusMaxPosNP.save(fp);
+	FocusBacklashSP.save(fp);
+	FocusBacklashNP.save(fp);
 	IUSaveConfigNumber(fp, &FocusStepDelayNP);
 	IUSaveConfigNumber(fp, &FocuserTravelNP);
 	IUSaveConfigSwitch(fp, &TemperatureCompensateSP);
 	IUSaveConfigNumber(fp, &TemperatureCoefNP);
 	IUSaveConfigText(fp, &ActiveTelescopeTP);
-	IUSaveConfigNumber(fp, &PresetNP);
+	PresetNP.save(fp);
 	return true;
 }
 
@@ -785,14 +785,14 @@ void AstroberryFocuser::TimerHit()
 	if (backlashTicksRemaining == 0 && focuserTicksRemaining == 0)
 	{
 		//save position to file
-		savePosition((int) FocusAbsPosN[0].value * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
+		savePosition((int) FocusAbsPosNP[0].getValue() * MAX_RESOLUTION / resolution); // always save at MAX_RESOLUTION
 
 		// update abspos value and status
-		FocusAbsPosNP.s = IPS_OK;
-		IDSetNumber(&FocusAbsPosNP, nullptr);
-		FocusRelPosNP.s = IPS_OK;
-		IDSetNumber(&FocusRelPosNP, nullptr);
-		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosN[0].value);
+		FocusAbsPosNP.setState(IPS_OK);
+		FocusAbsPosNP.apply();
+		FocusRelPosNP.setState(IPS_OK);
+		FocusRelPosNP.apply();
+		DEBUGF(INDI::Logger::DBG_SESSION, "Focuser at the position %0.0f.", FocusAbsPosNP[0].getValue());
 
 		// reset last temperature
 		lastTemperature = FocusTemperatureN[0].value; // register last temperature
@@ -812,14 +812,14 @@ void AstroberryFocuser::TimerHit()
 	if (stepperDirection == 1)
 	{
 		// outward
-		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
+		if (FocusReverseSP[INDI_ENABLED].s == ISS_ON) {
 			gpiod_line_set_value(gpio_dir, 0); // Reverse Motion
 		} else {
 			gpiod_line_set_value(gpio_dir, 1); // Normal Motion
 		}
 	} else {
 		// inward
-		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
+		if (FocusReverseSP[INDI_ENABLED].s == ISS_ON) {
 			gpiod_line_set_value(gpio_dir, 1); // Reverse Motion
 		} else {
 			gpiod_line_set_value(gpio_dir, 0); // Normal Motion
@@ -841,8 +841,8 @@ void AstroberryFocuser::TimerHit()
 		backlashTicksRemaining -= 1;
 	}  else {
 		focuserTicksRemaining -= 1;
-		FocusAbsPosN[0].value += 1 * stepperDirection;
-		IDSetNumber(&FocusAbsPosNP, nullptr);
+		FocusAbsPosNP[0].setValue(FocusAbsPosNP[0].getValue() + 1 * stepperDirection);
+		FocusAbsPosNP.apply();
 	}
 
 	SetTimer(FocusStepDelayN[0].value);
@@ -888,23 +888,23 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 		return IPS_BUSY;
 	}
 
-	if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+	if (targetTicks < FocusAbsPosNP[0].min || targetTicks > FocusAbsPosNP[0].max)
 	{
 		DEBUG(INDI::Logger::DBG_WARNING, "Requested position is out of range.");
 		return IPS_ALERT;
 	}
 
-	if (targetTicks == FocusAbsPosN[0].value)
+	if (targetTicks == FocusAbsPosNP[0].getValue())
 	{
 		DEBUG(INDI::Logger::DBG_SESSION, "Already at the requested position.");
 		return IPS_OK;
 	}
 
 	// set focuser busy
-	FocusAbsPosNP.s = IPS_BUSY;
-	IDSetNumber(&FocusAbsPosNP, nullptr);
-	FocusRelPosNP.s = IPS_BUSY;
-	IDSetNumber(&FocusRelPosNP, nullptr);
+	FocusAbsPosNP.setState(IPS_BUSY);
+	FocusAbsPosNP.apply();
+	FocusRelPosNP.setState(IPS_BUSY);
+	FocusRelPosNP.apply();
 
 	// motor wake up
 	if ( gpiod_line_get_value(gpio_sleep) == 0 )
@@ -917,7 +917,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	// set direction
 	const char* directionName;
 	int newDirection;
-	if (targetTicks > FocusAbsPosN[0].value)
+	if (targetTicks > FocusAbsPosNP[0].getValue())
 	{
 		newDirection = 1;
 		directionName = "outward";
@@ -927,10 +927,10 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	}
 
 	// if direction changed do backlash adjustment
-	if (newDirection != stepperDirection && FocusBacklashN[0].value != 0  && FocusBacklashS[INDI_ENABLED].s == ISS_ON)
+	if (newDirection != stepperDirection && FocusBacklashNP[0].getValue() != 0  && FocusBacklashSP[INDI_ENABLED].s == ISS_ON)
 	{
-		DEBUGF(INDI::Logger::DBG_SESSION, "Compensating backlash by %0.0f steps.", FocusBacklashN[0].value);
-		backlashTicksRemaining = FocusBacklashN[0].value;
+		DEBUGF(INDI::Logger::DBG_SESSION, "Compensating backlash by %0.0f steps.", FocusBacklashNP[0].getValue());
+		backlashTicksRemaining = FocusBacklashNP[0].getValue();
 	} else {
 		backlashTicksRemaining = 0;
 	}
@@ -939,7 +939,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	stepperDirection = newDirection;
 
 	// process targetTicks
-	focuserTicksRemaining = abs(targetTicks - FocusAbsPosN[0].value);
+	focuserTicksRemaining = abs(targetTicks - FocusAbsPosNP[0].getValue());
 	DEBUGF(INDI::Logger::DBG_SESSION, "Focuser is moving %s to position %d.", directionName, targetTicks);
 
 	SetTimer(FocusStepDelayN[0].value);
@@ -949,7 +949,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 
 IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 {
-	uint32_t targetTicks = (uint32_t) FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
+	uint32_t targetTicks = (uint32_t) FocusAbsPosNP[0].getValue() + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
 	return MoveAbsFocuser(targetTicks);
 }
 
@@ -1198,7 +1198,7 @@ void AstroberryFocuser::getFocuserInfo()
 	}
 
 	float cfz = 4.88 * 0.520 * pow(f_ratio, 2); // CFZ = 4.88 · λ · f^2
-	float step_size = 1000.0 * travel_mm / FocusMaxPosN[0].value;
+	float step_size = 1000.0 * travel_mm / FocusMaxPosNP[0].getValue();
 	float steps_per_cfz = (int) cfz / step_size;
 
 	// alert is number of steps per critical focus zone is too low
@@ -1272,7 +1272,7 @@ void AstroberryFocuser::temperatureCompensation()
 		if ( abs(thermalExpansion) > FocuserInfoN[1].value / 2)
 		{
 			int thermalAdjustment = round((thermalExpansion / FocuserInfoN[0].value) / 2); // adjust focuser by half number of steps to keep it in the center of cfz
-			MoveAbsFocuser(FocusAbsPosN[0].value + thermalAdjustment); // adjust focuser position
+			MoveAbsFocuser(FocusAbsPosNP[0].getValue() + thermalAdjustment); // adjust focuser position
 			lastTemperature = FocusTemperatureN[0].value; // register last temperature
 			DEBUGF(INDI::Logger::DBG_SESSION, "Focuser adjusted by %d steps due to temperature change by %0.2f°C", thermalAdjustment, deltaTemperature);
 		}
