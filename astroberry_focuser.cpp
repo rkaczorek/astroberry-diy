@@ -354,8 +354,8 @@ bool AstroberryFocuser::initProperties()
 	removeProperty("POLLING_PERIOD", nullptr);
 
 	// Load some custom properties before connecting
-	defineSwitch(&MotorBoardSP);
-	defineNumber(&BCMpinsNP);
+	defineProperty(&MotorBoardSP);
+	defineProperty(&BCMpinsNP);
 
 	// Load config values, which cannot be changed after we are connected
 	loadConfig(false, "MOTOR_BOARD"); // load stepper motor controller
@@ -376,21 +376,21 @@ bool AstroberryFocuser::updateProperties()
 
 	if (isConnected())
 	{
-		defineSwitch(&StepperStandbySP);
-		defineNumber(&StepperStandbyTimeNP);
-		defineText(&ActiveTelescopeTP);
-		defineSwitch(&FocusResolutionSP);
-		defineNumber(&FocuserTravelNP);
-		defineNumber(&FocuserInfoNP);
-		defineNumber(&FocusStepDelayNP);
+		defineProperty(&StepperStandbySP);
+		defineProperty(&StepperStandbyTimeNP);
+		defineProperty(&ActiveTelescopeTP);
+		defineProperty(&FocusResolutionSP);
+		defineProperty(&FocuserTravelNP);
+		defineProperty(&FocuserInfoNP);
+		defineProperty(&FocusStepDelayNP);
 
 		IDSnoopDevice(ActiveTelescopeT[0].text, "TELESCOPE_INFO");
 
 		if (readDS18B20())
 		{
-			defineNumber(&FocusTemperatureNP);
-			defineNumber(&TemperatureCoefNP);
-			defineSwitch(&TemperatureCompensateSP);
+			defineProperty(&FocusTemperatureNP);
+			defineProperty(&TemperatureCoefNP);
+			defineProperty(&TemperatureCompensateSP);
 			readDS18B20(); // update immediately
 			lastTemperature = FocusTemperatureN[0].value; // init last temperature
 			IERmTimer(updateTemperatureID);

@@ -251,9 +251,9 @@ bool IndiAstroberrySystem::updateProperties()
 
 	if (isConnected())
 	{
-		defineText(&SysTimeTP);
-		defineText(&SysInfoTP);
-		defineSwitch(&SysControlSP);
+		defineProperty(&SysTimeTP);
+		defineProperty(&SysInfoTP);
+		defineProperty(&SysControlSP);
 	}
 	else
 	{
@@ -292,7 +292,7 @@ bool IndiAstroberrySystem::ISNewSwitch (const char *dev, const char *name, ISSta
 				IDSetSwitch(&SysControlSP, NULL);
 				
 				// confirm switch
-				defineSwitch(&SysOpConfirmSP);
+				defineProperty(&SysOpConfirmSP);
 
 				return true;
 			}
@@ -303,7 +303,7 @@ bool IndiAstroberrySystem::ISNewSwitch (const char *dev, const char *name, ISSta
 				IDSetSwitch(&SysControlSP, NULL);
 
 				// confirm switch
-				defineSwitch(&SysOpConfirmSP);
+				defineProperty(&SysOpConfirmSP);
 
 				return true;
 			}
