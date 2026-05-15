@@ -75,7 +75,7 @@ private:
 	INumber BCMpinsN[6];
 	INumberVectorProperty BCMpinsNP;
 	INumber StepperStandbyTimeN[1];
-	INumberVectorProperty StepperStandbyTimeNP;	
+	INumberVectorProperty StepperStandbyTimeNP;
 	INumber FocusStepDelayN[1];
 	INumberVectorProperty FocusStepDelayNP;
 	INumber FocuserTravelN[1];
@@ -104,7 +104,7 @@ private:
 	int backlashTicksRemaining;
 	int focuserTicksRemaining;
 	int stepperDirection = 1;
-	
+
 	int resolution = 1;
 	float lastTemperature;
 };

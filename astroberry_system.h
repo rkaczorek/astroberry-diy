@@ -53,7 +53,7 @@ private:
 	ISwitchVectorProperty SysControlSP;
 	ISwitch SysOpConfirmS[2];
 	ISwitchVectorProperty SysOpConfirmSP;
-	
+
 	int polling = 0;
 };
 
