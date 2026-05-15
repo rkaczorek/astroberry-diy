@@ -1,3 +1,9 @@
+indi-astroberry-diy (2.11) unstable; urgency=medium
+
+  * Code refactoring for compatibility with libgpiod 2.0 and INDI 2.0
+
+ -- Radek Kaczorek <rkaczorek@gmail.com>  Fri, 15 May 2026 13:33:47 +0200
+
 indi-astroberry-diy (2.10) buster; urgency=medium
 
   * Native sync capability added (replacing custom reset)
