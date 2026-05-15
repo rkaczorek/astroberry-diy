@@ -1178,7 +1178,7 @@ void IndiAstroberryRelays::TimerHit()
 void IndiAstroberryRelays::udateSwitches()
 {
 	int gpio_relay_status[8];
-	
+
 	gpio_relay_status[0] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[0].value);
 	gpio_relay_status[1] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[1].value);
 	gpio_relay_status[2] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[2].value);

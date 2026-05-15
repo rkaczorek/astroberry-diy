@@ -290,7 +290,7 @@ bool IndiAstroberrySystem::ISNewSwitch (const char *dev, const char *name, ISSta
 				DEBUG(INDI::Logger::DBG_SESSION, "Astroberry device is set to REBOOT. Confirm or Cancel operation.");
 				SysControlSP.s = IPS_BUSY;
 				IDSetSwitch(&SysControlSP, NULL);
-				
+
 				// confirm switch
 				defineSwitch(&SysOpConfirmSP);
 
