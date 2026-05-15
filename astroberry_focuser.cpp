@@ -713,31 +713,31 @@ bool AstroberryFocuser::ISNewSwitch (const char *dev, const char *name, ISState 
 			FocusMaxPosNP[0].setStep((int) FocusMaxPosNP[0].getStep() * resolution / last_resolution);
 			FocusMaxPosNP[0].setValue((int) FocusMaxPosNP[0].getValue() * resolution / last_resolution);
 			FocusMaxPosNP.apply();
-			IUUpdateMinMax(&FocusMaxPosNP); // This call is not INDI protocol compliant
+			IUUpdateMinMax(FocusMaxPosNP); // This call is not INDI protocol compliant
 
 			FocusAbsPosNP[0].setMax((int) FocusAbsPosNP[0].getMax() * resolution / last_resolution);
 			FocusAbsPosNP[0].setStep((int) FocusAbsPosNP[0].getStep() * resolution / last_resolution);
 			FocusAbsPosNP[0].setValue((int) FocusAbsPosNP[0].getValue() * resolution / last_resolution);
 			FocusAbsPosNP.apply();
-			IUUpdateMinMax(&FocusAbsPosNP); // This call is not INDI protocol compliant
+			IUUpdateMinMax(FocusAbsPosNP); // This call is not INDI protocol compliant
 
 			FocusRelPosNP[0].setMax((int) FocusRelPosNP[0].getMax() * resolution / last_resolution);
 			FocusRelPosNP[0].setStep((int) FocusRelPosNP[0].getStep() * resolution / last_resolution);
 			FocusRelPosNP[0].setValue((int) FocusRelPosNP[0].getValue() * resolution / last_resolution);
 			FocusRelPosNP.apply();
-			IUUpdateMinMax(&FocusRelPosNP); // This call is not INDI protocol compliant
+			IUUpdateMinMax(FocusRelPosNP); // This call is not INDI protocol compliant
 
 			FocusSyncNP[0].setMax(FocusSyncNP[0].getMax() * resolution / last_resolution);
 			FocusSyncNP[0].setStep(FocusSyncNP[0].getStep() * resolution / last_resolution);
 			FocusSyncNP[0].setValue(FocusSyncNP[0].getValue() * resolution / last_resolution);
 			FocusSyncNP.apply();
-			IUUpdateMinMax(&FocusSyncNP); // This call is not INDI protocol compliant
+			IUUpdateMinMax(FocusSyncNP); // This call is not INDI protocol compliant
 
 			FocusBacklashNP[0].setMax((int) FocusBacklashNP[0].getMax() * resolution / last_resolution);
 			FocusBacklashNP[0].setStep((int) FocusBacklashNP[0].getStep() * resolution / last_resolution);
 			FocusBacklashNP[0].setValue((int) FocusBacklashNP[0].getValue() * resolution / last_resolution);
 			FocusBacklashNP.apply();
-			IUUpdateMinMax(&FocusBacklashNP); // This call is not INDI protocol compliant
+			IUUpdateMinMax(FocusBacklashNP); // This call is not INDI protocol compliant
 
 			PresetNP[0].setValue((int) PresetNP[0].getValue() * resolution / last_resolution);
 			PresetNP[1].setValue((int) PresetNP[1].getValue() * resolution / last_resolution);
@@ -822,16 +822,16 @@ bool AstroberryFocuser::saveConfigItems(FILE *fp)
 	IUSaveConfigSwitch(fp, &StepperStandbySP);
 	IUSaveConfigNumber(fp, &StepperStandbyTimeNP);
 	IUSaveConfigSwitch(fp, &FocusResolutionSP);
-	IUSaveConfigSwitch(fp, &FocusReverseSP);
-	IUSaveConfigNumber(fp, &FocusMaxPosNP);
-	IUSaveConfigSwitch(fp, &FocusBacklashSP);
-	IUSaveConfigNumber(fp, &FocusBacklashNP);
+	IUSaveConfigSwitch(fp, FocusReverseSP);
+	IUSaveConfigNumber(fp, FocusMaxPosNP);
+	IUSaveConfigSwitch(fp, FocusBacklashSP);
+	IUSaveConfigNumber(fp, FocusBacklashNP);
 	IUSaveConfigNumber(fp, &FocusStepDelayNP);
 	IUSaveConfigNumber(fp, &FocuserTravelNP);
 	IUSaveConfigSwitch(fp, &TemperatureCompensateSP);
 	IUSaveConfigNumber(fp, &TemperatureCoefNP);
 	IUSaveConfigText(fp, &ActiveTelescopeTP);
-	IUSaveConfigNumber(fp, &PresetNP);
+	IUSaveConfigNumber(fp, PresetNP);
 	return true;
 }
 
