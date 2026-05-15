@@ -838,7 +838,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 
 			if ( MasterSwitchS[0].s == ISS_ON )
 			{
-				rv = gpiod_line_set_value(gpio_relay1, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[0].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #1");
@@ -854,7 +854,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch1S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch1SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay2, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[1].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #2");
@@ -870,7 +870,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch2S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch2SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay3, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[2].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #3");
@@ -886,7 +886,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch3S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch3SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay4, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[3].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #4");
@@ -902,7 +902,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch4S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch4SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay5, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[4].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #5");
@@ -918,7 +918,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch5S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch5SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay6, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[5].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #6");
@@ -934,7 +934,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch6S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch6SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay7, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[6].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #7");
@@ -950,7 +950,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch7S[1].s = ISS_OFF;
 				IDSetSwitch(&Switch7SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay8, activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[7].value, activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #8");
@@ -975,7 +975,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 			}
 			if ( MasterSwitchS[1].s == ISS_ON )
 			{
-				rv = gpiod_line_set_value(gpio_relay1, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[0].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #1");
@@ -991,7 +991,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch1S[1].s = ISS_ON;
 				IDSetSwitch(&Switch1SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay2, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[1].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #2");
@@ -1007,7 +1007,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch2S[1].s = ISS_ON;
 				IDSetSwitch(&Switch2SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay3, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[2].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #3");
@@ -1023,7 +1023,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch3S[1].s = ISS_ON;
 				IDSetSwitch(&Switch3SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay4, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[3].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #4");
@@ -1039,7 +1039,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch4S[1].s = ISS_ON;
 				IDSetSwitch(&Switch4SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay5, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[4].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #5");
@@ -1055,7 +1055,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch5S[1].s = ISS_ON;
 				IDSetSwitch(&Switch5SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay6, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[5].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #6");
@@ -1071,7 +1071,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch6S[1].s = ISS_ON;
 				IDSetSwitch(&Switch6SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay7, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[6].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #7");
@@ -1087,7 +1087,7 @@ bool IndiAstroberryRelays::ISNewSwitch (const char *dev, const char *name, ISSta
 				Switch7S[1].s = ISS_ON;
 				IDSetSwitch(&Switch7SP, NULL);
 
-				rv = gpiod_line_set_value(gpio_relay8, !activeState);
+				rv = gpiod_line_request_set_value(relay_request, (unsigned int)BCMpinsN[7].value, !activeState ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 				if (rv != 0)
 				{
 					DEBUG(INDI::Logger::DBG_ERROR, "Error setting Astroberry Relay #8");
@@ -1179,14 +1179,14 @@ void IndiAstroberryRelays::udateSwitches()
 {
 	int gpio_relay_status[8];
 	
-	gpio_relay_status[0] = gpiod_line_get_value(gpio_relay1);
-	gpio_relay_status[1] = gpiod_line_get_value(gpio_relay2);
-	gpio_relay_status[2] = gpiod_line_get_value(gpio_relay3);
-	gpio_relay_status[3] = gpiod_line_get_value(gpio_relay4);
-	gpio_relay_status[4] = gpiod_line_get_value(gpio_relay5);
-	gpio_relay_status[5] = gpiod_line_get_value(gpio_relay6);
-	gpio_relay_status[6] = gpiod_line_get_value(gpio_relay7);
-	gpio_relay_status[7] = gpiod_line_get_value(gpio_relay8);
+	gpio_relay_status[0] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[0].value);
+	gpio_relay_status[1] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[1].value);
+	gpio_relay_status[2] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[2].value);
+	gpio_relay_status[3] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[3].value);
+	gpio_relay_status[4] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[4].value);
+	gpio_relay_status[5] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[5].value);
+	gpio_relay_status[6] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[6].value);
+	gpio_relay_status[7] = gpiod_line_request_get_value(relay_request, (unsigned int)BCMpinsN[7].value);
 
 	// handle active-low status
 	for (int i=0; i < 8; i++) {

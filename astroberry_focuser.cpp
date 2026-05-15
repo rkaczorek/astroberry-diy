@@ -962,10 +962,10 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 	IDSetNumber(&FocusRelPosNP, nullptr);
 
 	// motor wake up
-	if ( gpiod_line_get_value(gpio_sleep) == 0 )
+	if ( gpiod_line_request_get_value(focuser_request, (unsigned int)BCMpinsN[LINE_SLEEP].value) == GPIOD_LINE_VALUE_INACTIVE )
 	{
 		IERmTimer(stepperStandbyID);
-		gpiod_line_set_value(gpio_sleep, 1);
+		gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_SLEEP].value, GPIOD_LINE_VALUE_ACTIVE);
 		DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor waking up.");
 	}
 
