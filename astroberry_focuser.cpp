@@ -1004,7 +1004,7 @@ IPState AstroberryFocuser::MoveAbsFocuser(uint32_t targetTicks)
 
 IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 {
-	uint32_t targetTicks = (uint32_t) FocusAbsPosN[0].value + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
+	uint32_t targetTicks = (uint32_t) FocusAbsPosNP[0].getValue() + (ticks * (dir == FOCUS_INWARD ? -1 : 1));
 	return MoveAbsFocuser(targetTicks);
 }
 
