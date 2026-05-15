@@ -23,7 +23,7 @@
 
 #include "astroberry_system.h"
 
-#include <gpiod.h>
+
 
 // We declare an auto pointer to IndiAstroberrySystem
 std::unique_ptr<IndiAstroberrySystem> indiAstroberrySystem(new IndiAstroberrySystem());

@@ -21,7 +21,10 @@ include_directories(${INDI_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-set(GPIO_LIBRARIES "libgpiod.so")
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GPIOD REQUIRED libgpiod>=2.0)
+include_directories(${GPIOD_INCLUDE_DIRS})
+set(GPIO_LIBRARIES ${GPIOD_LIBRARIES})
 
 ################ Astroberry System ################
 set(indi_astroberry_system_SRCS
