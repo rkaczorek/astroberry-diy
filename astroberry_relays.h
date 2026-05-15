@@ -82,14 +82,7 @@ private:
 
 	const char* gpio_chip_path = "/dev/gpiochip0";
 	struct gpiod_chip *chip;
-	struct gpiod_line *gpio_relay1;
-	struct gpiod_line *gpio_relay2;
-	struct gpiod_line *gpio_relay3;
-	struct gpiod_line *gpio_relay4;
-	struct gpiod_line *gpio_relay5;
-	struct gpiod_line *gpio_relay6;
-	struct gpiod_line *gpio_relay7;
-	struct gpiod_line *gpio_relay8;
+	struct gpiod_line_request *relay_request = nullptr;
 };
 
 #endif

@@ -90,12 +90,16 @@ private:
 	ITextVectorProperty ActiveTelescopeTP;
 
 	struct gpiod_chip *chip;
-	struct gpiod_line *gpio_dir;
-	struct gpiod_line *gpio_step;
-	struct gpiod_line *gpio_sleep;
-	struct gpiod_line *gpio_m1;
-	struct gpiod_line *gpio_m2;
-	struct gpiod_line *gpio_m3;
+	struct gpiod_line_request *focuser_request = nullptr;
+	enum {
+		LINE_DIR = 0,
+		LINE_STEP,
+		LINE_SLEEP,
+		LINE_M1,
+		LINE_M2,
+		LINE_M3,
+		NUM_LINES
+	};
 
 	int backlashTicksRemaining;
 	int focuserTicksRemaining;

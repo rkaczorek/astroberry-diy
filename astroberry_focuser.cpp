@@ -165,7 +165,16 @@ bool AstroberryFocuser::Connect()
 	// verify BCM Pins are not used by other consumers
 	for (unsigned int pin = 0; pin < 6; pin++)
 	{
-		if (gpiod_line_is_used(gpiod_chip_get_line(chip, BCMpinsN[pin].value)))
+		struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, (unsigned int)BCMpinsN[pin].value);
+		if (!info) {
+			DEBUGF(INDI::Logger::DBG_ERROR, "Cannot get info for BCM Pin %0.0f", BCMpinsN[pin].value);
+			gpiod_chip_close(chip);
+			return false;
+		}
+		bool used = gpiod_line_info_is_used(info);
+		gpiod_line_info_free(info);
+
+		if (used)
 		{
 			DEBUGF(INDI::Logger::DBG_ERROR, "BCM Pin %0.0f already used", BCMpinsN[pin].value);
 			gpiod_chip_close(chip);
@@ -173,24 +182,58 @@ bool AstroberryFocuser::Connect()
 		}
 	}
 
-	// Select gpios
-	gpio_dir = gpiod_chip_get_line(chip, BCMpinsN[0].value);
-	gpio_step = gpiod_chip_get_line(chip, BCMpinsN[1].value);
-	gpio_sleep = gpiod_chip_get_line(chip, BCMpinsN[2].value);
-	gpio_m1 = gpiod_chip_get_line(chip, BCMpinsN[3].value);
-	gpio_m2 = gpiod_chip_get_line(chip, BCMpinsN[4].value);
-	gpio_m3 = gpiod_chip_get_line(chip, BCMpinsN[5].value);
+	// Request gpios
+	struct gpiod_line_settings *settings = gpiod_line_settings_new();
+	struct gpiod_line_config *line_cfg = gpiod_line_config_new();
+	struct gpiod_request_config *req_cfg = gpiod_request_config_new();
 
-	// Set initial state for gpios
-	gpiod_line_request_output(gpio_dir, "dir@astroberry_focuser", 1); // default direction is outward
-	gpiod_line_request_output(gpio_step, "step@astroberry_focuser", 0);
-	gpiod_line_request_output(gpio_sleep, "sleep@astroberry_focuser", 1); // start stepper in wake up state
-	gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-	gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
+	if (!settings || !line_cfg || !req_cfg) {
+		DEBUG(INDI::Logger::DBG_ERROR, "Memory allocation error for GPIO configuration.");
+		if (settings) gpiod_line_settings_free(settings);
+		if (line_cfg) gpiod_line_config_free(line_cfg);
+		if (req_cfg) gpiod_request_config_free(req_cfg);
+		gpiod_chip_close(chip);
+		return false;
+	}
 
-	// If A4988 controller, use additional GPIO
+	gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+	gpiod_request_config_set_consumer(req_cfg, "astroberry_focuser");
+
+	unsigned int offsets[NUM_LINES];
+	for (int i = 0; i < NUM_LINES; i++) {
+		offsets[i] = (unsigned int)BCMpinsN[i].value;
+	}
+
+	// LINE_DIR: default outward (1)
+	gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_ACTIVE);
+	gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_DIR], 1, settings);
+
+	// LINE_STEP: default 0
+	gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+	gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_STEP], 1, settings);
+
+	// LINE_SLEEP: default 1 (wake up)
+	gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_ACTIVE);
+	gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_SLEEP], 1, settings);
+
+	// LINE_M1, LINE_M2, LINE_M3: default 0
+	gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+	gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_M1], 1, settings);
+	gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_M2], 1, settings);
 	if ( MotorBoardS[1].s == ISS_ON )
-		gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
+		gpiod_line_config_add_line_settings(line_cfg, &offsets[LINE_M3], 1, settings);
+
+	focuser_request = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
+
+	gpiod_line_settings_free(settings);
+	gpiod_line_config_free(line_cfg);
+	gpiod_request_config_free(req_cfg);
+
+	if (!focuser_request) {
+		DEBUG(INDI::Logger::DBG_ERROR, "Failed to request GPIO lines for Focuser.");
+		gpiod_chip_close(chip);
+		return false;
+	}
 
 	//read last position from file & convert from MAX_RESOLUTION to current resolution
 	FocusAbsPosN[0].value = savePosition(-1) != -1 ? (int) savePosition(-1) * resolution / MAX_RESOLUTION : 0;
@@ -231,10 +274,18 @@ bool AstroberryFocuser::Disconnect()
 	IERmTimer(temperatureCompensationID);
 
 	// Set stepper motor asleep
-	gpiod_line_set_value(gpio_sleep, 0);
+	if (focuser_request)
+		gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_SLEEP].value, GPIOD_LINE_VALUE_INACTIVE);
 
 	// Close device
-	gpiod_chip_close(chip);
+	if (focuser_request) {
+		gpiod_line_request_release(focuser_request);
+		focuser_request = nullptr;
+	}
+	if (chip) {
+		gpiod_chip_close(chip);
+		chip = nullptr;
+	}
 
 	// Unlock Motor Board setting
 	MotorBoardSP.s=IPS_IDLE;
@@ -457,8 +508,12 @@ bool AstroberryFocuser::ISNewNumber (const char *dev, const char *name, double v
 					chip = gpiod_chip_open("/dev/gpiochip0");
 					if (chip)
 					{
-						struct gpiod_line *line = gpiod_chip_get_line(chip, values[i]);
-						bool line_status = gpiod_line_is_used(line);
+						struct gpiod_line_info *info = gpiod_chip_get_line_info(chip, (unsigned int)values[i]);
+						bool line_status = false;
+						if (info) {
+							line_status = gpiod_line_info_is_used(info);
+							gpiod_line_info_free(info);
+						}
 						gpiod_chip_close(chip);
 
 						if (line_status)
@@ -813,16 +868,16 @@ void AstroberryFocuser::TimerHit()
 	{
 		// outward
 		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
-			gpiod_line_set_value(gpio_dir, 0); // Reverse Motion
+			gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_DIR].value, GPIOD_LINE_VALUE_INACTIVE); // Reverse Motion
 		} else {
-			gpiod_line_set_value(gpio_dir, 1); // Normal Motion
+			gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_DIR].value, GPIOD_LINE_VALUE_ACTIVE); // Normal Motion
 		}
 	} else {
 		// inward
 		if (FocusReverseS[INDI_ENABLED].s == ISS_ON) {
-			gpiod_line_set_value(gpio_dir, 1); // Reverse Motion
+			gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_DIR].value, GPIOD_LINE_VALUE_ACTIVE); // Reverse Motion
 		} else {
-			gpiod_line_set_value(gpio_dir, 0); // Normal Motion
+			gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_DIR].value, GPIOD_LINE_VALUE_INACTIVE); // Normal Motion
 		}
 	}
 
@@ -956,19 +1011,29 @@ IPState AstroberryFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 void AstroberryFocuser::stepMotor()
 {
 	// step on
-	gpiod_line_set_value(gpio_step, 1);
+	gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_STEP].value, GPIOD_LINE_VALUE_ACTIVE);
 	// wait
 	msleep(FocusStepDelayN[0].value);
 	// step off
-	gpiod_line_set_value(gpio_step, 0);
+	gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_STEP].value, GPIOD_LINE_VALUE_INACTIVE);
 }
 
 void AstroberryFocuser::setResolution(int res)
 {
-	// Release lines
-	gpiod_line_release(gpio_m1);
-	gpiod_line_release(gpio_m2);
-	gpiod_line_release(gpio_m3);
+	struct gpiod_line_settings *settings = gpiod_line_settings_new();
+	struct gpiod_line_config *line_cfg = gpiod_line_config_new();
+
+	if (!settings || !line_cfg) {
+		if (settings) gpiod_line_settings_free(settings);
+		if (line_cfg) gpiod_line_config_free(line_cfg);
+		return;
+	}
+
+	unsigned int m1_offset = (unsigned int)BCMpinsN[LINE_M1].value;
+	unsigned int m2_offset = (unsigned int)BCMpinsN[LINE_M2].value;
+	unsigned int m3_offset = (unsigned int)BCMpinsN[LINE_M3].value;
+
+	gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
 
 	if (MotorBoardS[0].s == ISS_ON) {
 
@@ -981,37 +1046,20 @@ void AstroberryFocuser::setResolution(int res)
 		* 6) 1/32  - M1=floating M2=1
 		*/
 
-		switch(res)
-		{
-			case 1:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 2:	// 1:2
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 4:	// 1:4
-				gpiod_line_request_output_flags(gpio_m1, "m1@astroberry_focuser", GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
-			case 8:	// 1:8
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			case 16:	// 1:16
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			case 32:	// 1:32
-				gpiod_line_request_output_flags(gpio_m1, "m1@astroberry_focuser", GPIOD_LINE_REQUEST_FLAG_OPEN_DRAIN, 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				break;
-			default:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				break;
+		// Default M2
+		gpiod_line_settings_set_drive(settings, GPIOD_LINE_DRIVE_PUSH_PULL);
+		gpiod_line_settings_set_output_value(settings, (res >= 8) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+		gpiod_line_config_add_line_settings(line_cfg, &m2_offset, 1, settings);
+
+		// M1
+		if (res == 4 || res == 32) {
+			gpiod_line_settings_set_drive(settings, GPIOD_LINE_DRIVE_OPEN_DRAIN);
+			gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+		} else {
+			gpiod_line_settings_set_drive(settings, GPIOD_LINE_DRIVE_PUSH_PULL);
+			gpiod_line_settings_set_output_value(settings, (res == 2 || res == 16) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
 		}
+		gpiod_line_config_add_line_settings(line_cfg, &m1_offset, 1, settings);
 	}
 
 	if (MotorBoardS[1].s == ISS_ON) {
@@ -1024,40 +1072,25 @@ void AstroberryFocuser::setResolution(int res)
 		* 5) 1/16  - M1=1 M2=1 M3=1
 		*/
 
-		switch(res)
-		{
-			case 1:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 2:	// 1:2
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 4:	// 1:4
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 8:	// 1:8
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-			case 16:	// 1:16
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 1);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 1);
-				break;
-			default:	// 1:1
-				gpiod_line_request_output(gpio_m1, "m1@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m2, "m2@astroberry_focuser", 0);
-				gpiod_line_request_output(gpio_m3, "m3@astroberry_focuser", 0);
-				break;
-		}
+		gpiod_line_settings_set_drive(settings, GPIOD_LINE_DRIVE_PUSH_PULL);
+
+		// M1
+		gpiod_line_settings_set_output_value(settings, (res == 2 || res == 8 || res == 16) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+		gpiod_line_config_add_line_settings(line_cfg, &m1_offset, 1, settings);
+
+		// M2
+		gpiod_line_settings_set_output_value(settings, (res == 4 || res == 8 || res == 16) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+		gpiod_line_config_add_line_settings(line_cfg, &m2_offset, 1, settings);
+
+		// M3
+		gpiod_line_settings_set_output_value(settings, (res == 16) ? GPIOD_LINE_VALUE_ACTIVE : GPIOD_LINE_VALUE_INACTIVE);
+		gpiod_line_config_add_line_settings(line_cfg, &m3_offset, 1, settings);
 	}
+
+	gpiod_line_request_reconfigure_lines(focuser_request, line_cfg);
+
+	gpiod_line_config_free(line_cfg);
+	gpiod_line_settings_free(settings);
 }
 
 int AstroberryFocuser::savePosition(int pos)
@@ -1243,7 +1276,7 @@ void AstroberryFocuser::stepperStandby()
 	if (!isConnected())
 		return;
 
-	gpiod_line_set_value(gpio_sleep, 0); // set stepper motor asleep
+	gpiod_line_request_set_value(focuser_request, (unsigned int)BCMpinsN[LINE_SLEEP].value, GPIOD_LINE_VALUE_INACTIVE); // set stepper motor asleep
 	DEBUG(INDI::Logger::DBG_SESSION, "Stepper motor going standby.");
 }
 
