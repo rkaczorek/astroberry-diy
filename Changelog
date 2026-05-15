@@ -1,3 +1,6 @@
+v2.11
+  * Code refactoring for compatibility with libgpiod 2.0 and INDI 2.0
+
 v2.10
   * Native sync capability added (replacing custom reset)
   * Native backlash capability added (replacing custom backlash)
@@ -97,5 +100,4 @@ v0.1
 * indi_rpifocus - disabling dualspeed mode. single speed mode only used (native)
 * indi_rpialtimu  - change of values format from 0.3f to 0.1f
 
-v0.0
-* all - Initial release of astroberry drivers
+First released on 06.04.2015
